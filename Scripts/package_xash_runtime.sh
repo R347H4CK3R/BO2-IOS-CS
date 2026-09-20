@@ -1,11 +1,28 @@
 #!/bin/bash
 set -euo pipefail
 
+MODE="${1:-device}"
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 XASH="$ROOT/Build/OpenSourceEngine/xash3d-fwgs"
-SDL_FRAMEWORK="$ROOT/Build/XashDevice/SDL2.framework"
-OUT="$ROOT/Build/XashRuntime"
-APP="$OUT/Payload/BO2IOSCS.app"
+
+case "$MODE" in
+  device)
+    ENGINE_BUILD="$ROOT/Build/XashDevice"
+    SDL_FRAMEWORK="$ENGINE_BUILD/SDL2.framework"
+    OUT="$ROOT/Build/XashRuntime"
+    APP="$OUT/Payload/BO2IOSCS.app"
+    ;;
+  simulator)
+    ENGINE_BUILD="$ROOT/Build/XashSimulator"
+    SDL_FRAMEWORK="$ENGINE_BUILD/SDL2.framework"
+    OUT="$ROOT/Build/XashSimulatorRuntime"
+    APP="$OUT/BO2IOSCS.app"
+    ;;
+  *)
+    echo "usage: $0 {device|simulator}" >&2
+    exit 2
+    ;;
+esac
 
 [ -d "$XASH" ] || { echo "Xash source tree missing: $XASH"; exit 2; }
 [ -d "$SDL_FRAMEWORK" ] || { echo "SDL2.framework missing: $SDL_FRAMEWORK"; exit 3; }
@@ -13,16 +30,12 @@ APP="$OUT/Payload/BO2IOSCS.app"
 rm -rf "$OUT"
 mkdir -p "$APP"
 
-# Install the pinned Xash build through its own iOS install rules.
 (
   cd "$XASH"
   ./waf install --destdir="$APP"
 )
 
-# Bundle SDL exactly as the engine's native iOS packaging path expects.
 cp -R "$SDL_FRAMEWORK" "$APP/SDL2.framework"
-
-# Project-owned bootstrap data only. No proprietary source data enters CI.
 cp -R "$ROOT/GameData/XashBootstrap/bo2ioscs" "$APP/bo2ioscs"
 
 cat > "$APP/Info.plist" <<'PLIST'
@@ -56,16 +69,15 @@ cat > "$APP/Info.plist" <<'PLIST'
 </plist>
 PLIST
 
-# Sanity-check expected native runtime products from the install step.
 [ -f "$APP/xash" ] || {
   echo "Installed Xash executable missing"
-  find "$APP" -maxdepth 4 -print
+  find "$APP" -maxdepth 5 -print
   exit 4
 }
+
 file "$APP/xash"
 file "$APP/SDL2.framework/SDL2"
 
-# Ad-hoc sign nested Mach-O code for installability in sideload/re-sign workflows.
 while IFS= read -r dylib; do
   codesign --force --sign - --timestamp=none "$dylib"
 done < <(find "$APP" -type f -name '*.dylib' -print)
@@ -74,19 +86,20 @@ codesign --force --sign - --timestamp=none "$APP/SDL2.framework"
 codesign --force --sign - --timestamp=none "$APP/xash"
 codesign --force --sign - --timestamp=none "$APP"
 
-(
-  cd "$OUT"
-  zip -qry BO2IOSCS-Xash-bootstrap.ipa Payload
-)
+if [ "$MODE" = "device" ]; then
+  (
+    cd "$OUT"
+    zip -qry BO2IOSCS-Xash-bootstrap.ipa Payload
+  )
 
-IPA="$OUT/BO2IOSCS-Xash-bootstrap.ipa"
-[ -s "$IPA" ] || { echo "Xash bootstrap IPA was not produced"; exit 5; }
+  IPA="$OUT/BO2IOSCS-Xash-bootstrap.ipa"
+  [ -s "$IPA" ] || { echo "Xash bootstrap IPA was not produced"; exit 5; }
 
-unzip -l "$IPA" | grep -q 'Payload/BO2IOSCS.app/xash'
-unzip -l "$IPA" | grep -q 'Payload/BO2IOSCS.app/bo2ioscs/gameinfo.txt'
-unzip -l "$IPA" | grep -q 'Payload/BO2IOSCS.app/SDL2.framework/SDL2'
+  unzip -l "$IPA" | grep -q 'Payload/BO2IOSCS.app/xash'
+  unzip -l "$IPA" | grep -q 'Payload/BO2IOSCS.app/bo2ioscs/gameinfo.txt'
+  unzip -l "$IPA" | grep -q 'Payload/BO2IOSCS.app/SDL2.framework/SDL2'
 
-cat > "$OUT/XASH_RUNTIME_REPORT.md" <<REPORT
+  cat > "$OUT/XASH_RUNTIME_REPORT.md" <<REPORT
 # Xash runtime package
 
 - engine: Xash3D FWGS
@@ -99,4 +112,18 @@ cat > "$OUT/XASH_RUNTIME_REPORT.md" <<REPORT
 - gameplay content: bootstrap metadata only; no converted BO2 map/game DLL is present yet
 REPORT
 
-echo "Created $IPA"
+  echo "Created $IPA"
+else
+  cat > "$OUT/XASH_SIMULATOR_RUNTIME_REPORT.md" <<REPORT
+# Xash simulator runtime app
+
+- engine: Xash3D FWGS
+- engine commit: 4857b389e6ba32ddaa68582aedcbc950c138f46a
+- architecture: arm64 iOS Simulator
+- app: BO2IOSCS.app
+- automated launch environment: BO2IOSCS_AUTOTEST=1
+- proprietary assets included: no
+REPORT
+
+  echo "Created $APP"
+fi
