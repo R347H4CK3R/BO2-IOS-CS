@@ -11,6 +11,8 @@ final class GameViewController: UIViewController, SCNSceneRendererDelegate {
     private var started = Date()
     private var autotest = false
     private var finished = false
+    private var loadedMapName = "none"
+    private var loadedWeaponCount = 0
 
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -41,19 +43,26 @@ final class GameViewController: UIViewController, SCNSceneRendererDelegate {
         floor.physicsBody = SCNPhysicsBody(type: .static, shape: nil)
         scene.rootNode.addChildNode(floor)
 
-        for x in [-16.0, 16.0] {
-            let wall = SCNNode(geometry: SCNBox(width: 0.5, height: 4, length: 22, chamferRadius: 0))
-            wall.position = SCNVector3(x, 2, 0)
-            wall.geometry?.firstMaterial?.diffuse.contents = UIColor.gray
-            wall.physicsBody = SCNPhysicsBody(type: .static, shape: nil)
-            scene.rootNode.addChildNode(wall)
-        }
-        for z in [-11.0, 11.0] {
-            let wall = SCNNode(geometry: SCNBox(width: 32, height: 4, length: 0.5, chamferRadius: 0))
-            wall.position = SCNVector3(0, 2, z)
-            wall.geometry?.firstMaterial?.diffuse.contents = UIColor.gray
-            wall.physicsBody = SCNPhysicsBody(type: .static, shape: nil)
-            scene.rootNode.addChildNode(wall)
+        do {
+            let map = try GameDataLoader.loadValidationMap()
+            let weapons = try GameDataLoader.loadWeapons()
+            loadedMapName = map.name
+            loadedWeaponCount = weapons.count
+            for box in map.boxes {
+                let node = SCNNode(geometry: SCNBox(width: CGFloat(box.sx * map.worldScale),
+                                                   height: CGFloat(box.sy * map.worldScale),
+                                                   length: CGFloat(box.sz * map.worldScale),
+                                                   chamferRadius: 0))
+                node.position = SCNVector3(Float(box.x * map.worldScale),
+                                           Float(box.y * map.worldScale),
+                                           Float(box.z * map.worldScale))
+                node.geometry?.firstMaterial?.diffuse.contents = UIColor.gray
+                node.physicsBody = SCNPhysicsBody(type: .static, shape: nil)
+                scene.rootNode.addChildNode(node)
+            }
+            RuntimeLog.stage("NORMALIZED_GAMEDATA_LOADED")
+        } catch {
+            RuntimeLog.stage("GAMEDATA_LOAD_FAILED")
         }
         RuntimeLog.stage("MAP_GEOMETRY_READY")
         RuntimeLog.stage("COLLISION_READY")
@@ -120,6 +129,9 @@ final class GameViewController: UIViewController, SCNSceneRendererDelegate {
                 "collision_ready": true,
                 "weapon_fire_worked": sim.shotsFired > 0,
                 "touch_ui_initialized": true,
+                "normalized_map_loaded": loadedMapName != "none",
+                "loaded_map": loadedMapName,
+                "weapon_definitions_loaded": loadedWeaponCount,
                 "performance_scope": "simulator-only"
             ]
             RuntimeLog.writeJSON(result, name: "AUTOTEST_RESULT.json")
