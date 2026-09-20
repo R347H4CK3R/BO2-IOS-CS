@@ -1,0 +1,3 @@
+[
+  {"id":"test_rifle","damage":30,"fireRate":9,"magazineCapacity":30,"reserveAmmo":90,"reloadDuration":2.3,"recoil":0.9,"spread":0.02}
+]
