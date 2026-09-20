@@ -1,0 +1,6 @@
+{
+  "source": "/path/to/PS3_GAME",
+  "intermediate_output": "./GeneratedGameData/Intermediate",
+  "runtime_output": "./GeneratedGameData/Runtime",
+  "preserve_originals": true
+}
