@@ -2,13 +2,20 @@ from __future__ import annotations
 
 from dataclasses import asdict, dataclass
 from pathlib import Path
+import ctypes
+import ctypes.util
 import struct
+import zlib
 
 IPAK_MAGIC = b"IPAK"
 IPAK_VERSION = 0x50000
 CHUNK_SIZE = 0x8000
 BLOCK_ALIGN = 0x80
 BLOCK_HEADER_SIZE = 0x80
+COMMAND_UNCOMPRESSED = 0
+COMMAND_COMPRESSED = 1
+COMMAND_SKIP = 0xCF
+DATA_HASH_MASK = 0x1FFFFFFF
 
 
 @dataclass
@@ -24,8 +31,9 @@ class IPakSection:
 
 @dataclass
 class IPakIndexEntry:
-    data_hash: int
+    # PS3/T6 stores nameHash before dataHash in the big-endian file.
     name_hash: int
+    data_hash: int
     offset: int
     size: int
 
@@ -52,6 +60,67 @@ class IPakBlockHeader:
 
     def to_dict(self):
         return asdict(self)
+
+
+def _align(value: int, alignment: int) -> int:
+    return (value + alignment - 1) & ~(alignment - 1)
+
+
+class LzoDecoder:
+    def __init__(self):
+        candidates = [
+            ctypes.util.find_library("lzo2"),
+            "/opt/homebrew/lib/liblzo2.dylib",
+            "/usr/local/lib/liblzo2.dylib",
+            "liblzo2.so.2",
+            "liblzo2.so",
+        ]
+        last_error = None
+        self.lib = None
+        for candidate in candidates:
+            if not candidate:
+                continue
+            try:
+                self.lib = ctypes.CDLL(candidate)
+                break
+            except OSError as exc:
+                last_error = exc
+        if self.lib is None:
+            raise RuntimeError(
+                "LZO runtime not found. Install the open-source lzo library to extract "
+                f"compressed IPAK commands. Last error: {last_error}"
+            )
+
+        self.decompress = self.lib.lzo1x_decompress_safe
+        self.decompress.argtypes = [
+            ctypes.c_void_p,
+            ctypes.c_size_t,
+            ctypes.c_void_p,
+            ctypes.POINTER(ctypes.c_size_t),
+            ctypes.c_void_p,
+        ]
+        self.decompress.restype = ctypes.c_int
+
+    def decode(self, data: bytes) -> bytes:
+        capacity = max(0x10000, len(data) * 16)
+        while capacity <= 64 * 1024 * 1024:
+            output = ctypes.create_string_buffer(capacity)
+            output_len = ctypes.c_size_t(capacity)
+            result = self.decompress(
+                data,
+                len(data),
+                output,
+                ctypes.byref(output_len),
+                None,
+            )
+            if result == 0:
+                return output.raw[: output_len.value]
+            # LZO_E_OUTPUT_OVERRUN is -5. Retry with a larger destination.
+            if result == -5:
+                capacity *= 2
+                continue
+            raise ValueError(f"LZO decompression failed with code {result}")
+        raise ValueError("LZO output exceeded 64 MiB safety limit")
 
 
 class IPakFile:
@@ -112,8 +181,8 @@ class IPakFile:
                 entry_offset = self.index_section.offset + i * 16
                 self.entries.append(
                     IPakIndexEntry(
-                        data_hash=self._u32(entry_offset),
-                        name_hash=self._u32(entry_offset + 4),
+                        name_hash=self._u32(entry_offset),
+                        data_hash=self._u32(entry_offset + 4),
                         offset=self._u32(entry_offset + 8),
                         size=self._u32(entry_offset + 12),
                     )
@@ -130,8 +199,8 @@ class IPakFile:
         if file_offset + BLOCK_HEADER_SIZE > data_end:
             raise ValueError("IPAK block header exceeds data section")
 
-        # On the PS3/big-endian variant the one-byte bitfield portions are
-        # serialized first, followed by the 24-bit numeric field.
+        # PS3/big-endian T6 bitfields serialize the one-byte portion first,
+        # followed by the 24-bit value.
         command_count = self.data[file_offset]
         output_offset = int.from_bytes(self.data[file_offset + 1 : file_offset + 4], "big")
 
@@ -155,10 +224,72 @@ class IPakFile:
             commands=commands,
         )
 
+    def extract_entry(self, entry: IPakIndexEntry, lzo: LzoDecoder | None = None) -> bytes:
+        if not self.data_section:
+            raise ValueError("IPAK has no data section")
+        if entry.offset + entry.size > self.data_section.size:
+            raise ValueError("IPAK index entry exceeds data section")
+
+        output = bytearray()
+        cursor = entry.offset
+        entry_end = entry.offset + entry.size
+
+        while cursor < entry_end:
+            block = self.parse_block(cursor)
+            command_data_offset = block.file_offset + BLOCK_HEADER_SIZE
+            has_output_command = any(
+                command.compressed in (COMMAND_UNCOMPRESSED, COMMAND_COMPRESSED)
+                for command in block.commands
+            )
+
+            if has_output_command and block.output_offset != len(output):
+                raise ValueError(
+                    f"IPAK block output offset {block.output_offset} does not match "
+                    f"current output length {len(output)}"
+                )
+
+            consumed = BLOCK_HEADER_SIZE
+            for command in block.commands:
+                command_end = command_data_offset + command.size
+                absolute_entry_end = self.data_section.offset + entry_end
+                if command_end > absolute_entry_end:
+                    raise ValueError("IPAK command data exceeds indexed entry")
+
+                payload = self.data[command_data_offset:command_end]
+                command_data_offset = command_end
+                consumed += command.size
+
+                if command.compressed == COMMAND_UNCOMPRESSED:
+                    output.extend(payload)
+                elif command.compressed == COMMAND_COMPRESSED:
+                    if lzo is None:
+                        lzo = LzoDecoder()
+                    output.extend(lzo.decode(payload))
+                elif command.compressed == COMMAND_SKIP:
+                    pass
+                else:
+                    # Unknown command modes are intentionally skipped, matching
+                    # the game reader's tolerant behavior while retaining metadata.
+                    pass
+
+            next_cursor = _align(cursor + consumed, BLOCK_ALIGN)
+            if next_cursor <= cursor:
+                raise ValueError("IPAK parser made no progress")
+            cursor = next_cursor
+
+        actual_crc = zlib.crc32(output) & DATA_HASH_MASK
+        expected_crc = entry.data_hash & DATA_HASH_MASK
+        if actual_crc != expected_crc:
+            raise ValueError(
+                f"IPAK CRC mismatch: expected 0x{expected_crc:08X}, got 0x{actual_crc:08X}"
+            )
+        return bytes(output)
+
     def inventory(self):
         entries = []
         for entry in self.entries:
             item = entry.to_dict()
+            item["masked_data_crc"] = entry.data_hash & DATA_HASH_MASK
             try:
                 item["first_block"] = self.parse_block(entry.offset).to_dict()
             except Exception as exc:
