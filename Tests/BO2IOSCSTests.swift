@@ -39,4 +39,30 @@ final class BO2IOSCSTests: XCTestCase {
         XCTAssertFalse(sim.fire(weapon: weapon, from: 0, at: 2))
         XCTAssertEqual(sim.bots[2].health, 100)
     }
+
+    func testPlantAndDetonationScoresAttack() {
+        let objective = RuntimeObjective(type: "plant_defuse", x: 0, y: 0, z: 0,
+                                         radius: 2.5, plantDuration: 1, fuseDuration: 2,
+                                         defuseDuration: 1)
+        let sim = MatchSimulation(botCount: 4, objective: objective)
+        sim.beginPlant()
+        sim.tick(dt: 1)
+        XCTAssertEqual(sim.objectiveState, .planted)
+        sim.tick(dt: 2)
+        XCTAssertEqual(sim.objectiveState, .detonated)
+        XCTAssertEqual(sim.scoreAttack, 1)
+    }
+
+    func testPlantAndDefuseScoresDefense() {
+        let objective = RuntimeObjective(type: "plant_defuse", x: 0, y: 0, z: 0,
+                                         radius: 2.5, plantDuration: 1, fuseDuration: 10,
+                                         defuseDuration: 1)
+        let sim = MatchSimulation(botCount: 4, objective: objective)
+        sim.beginPlant()
+        sim.tick(dt: 1)
+        sim.beginDefuse()
+        sim.tick(dt: 1)
+        XCTAssertEqual(sim.objectiveState, .defused)
+        XCTAssertEqual(sim.scoreDefense, 1)
+    }
 }
