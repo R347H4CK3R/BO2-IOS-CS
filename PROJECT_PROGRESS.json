@@ -5,22 +5,22 @@
   "known_blockers": [
     "The user-owned PS3 BO2 .ff fastfiles are authenticated/encrypted TAff0100 containers. This project intentionally does not bypass that encryption; payload conversion requires user-provided legally decrypted/normalized fastfile data.",
     "Physical iPhone installation/runtime validation has not yet been performed.",
-    "Decoded IPAK image payloads lack dimensions/pixel format/name metadata until corresponding legally decrypted/normalized fastfile image metadata is available."
+    "Decoded IPAK image payloads can only become runtime textures when authoritative dimensions/pixel format/layout metadata is supplied; the converter intentionally does not guess missing metadata."
   ],
   "last_successful_build": {
-    "workflow_run": 35499002277,
-    "run_number": 47,
-    "commit": "6fc822b1365fd6b3a9ed3c0b2530a2c02cfe656b"
+    "workflow_run": 35504764586,
+    "run_number": 50,
+    "commit": "9baa1e4f430631d05d52ebe66366b509dba85d2f"
   },
   "simulator_test_status": "PASS - app simulator runtime test and native pinned Xash3D FWGS simulator startup test",
   "device_build_status": "PASS - unsigned ARM64 app build and pinned Xash3D FWGS ARM64 device engine build",
   "ipa_validation_status": "PASS - BO2IOSCS unsigned IPA packaging validation and Xash bootstrap IPA validation",
   "ipa_path": "Build/BO2IOSCS-unsigned.ipa",
   "xash_runtime_status": "PASS - pinned Xash3D FWGS builds for iOS Simulator and ARM64 iOS device; simulator startup test passes; bootstrap device IPA validates",
-  "asset_scanner_status": "PASS - BO2 fastfile headers and PS3 IPAK containers recognized; IPAK payload LZO extraction implemented with CRC validation",
+  "asset_scanner_status": "PASS - BO2 fastfile headers and PS3 IPAK containers recognized; IPAK payload LZO extraction implemented with CRC validation; authoritative texture metadata v1 mapping implemented and CI-tested without guessing missing metadata",
   "next_work": [
     "Integrate the validated pinned Xash3D FWGS runtime into the project app/device IPA path rather than treating the bootstrap engine artifact as a separate validation target.",
-    "Define texture metadata mapping input so decoded IPAK payloads can be exported to standard runtime textures without guessing dimensions or compression format.",
+    "Use authoritative legally obtained texture metadata to turn mapped decoded IPAK payloads into standard runtime textures, including explicit handling of PS3 tiled/swizzled layouts.",
     "Accept user-provided legally decrypted/normalized fastfile zone data for map, model, entity, and image metadata conversion.",
     "Continue non-encrypted audio/container inventory without modifying originals.",
     "Perform physical iPhone installation/runtime validation once a device-side test is available."
