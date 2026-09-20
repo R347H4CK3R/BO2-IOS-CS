@@ -11,6 +11,47 @@ struct WeaponDefinition: Codable {
     let spread: Double
 }
 
+
+final class PlayerWeaponState {
+    let definition: WeaponDefinition
+    private(set) var magazine: Int
+    private(set) var reserve: Int
+    private(set) var isReloading = false
+    private(set) var reloadRemaining: TimeInterval = 0
+
+    init(definition: WeaponDefinition) {
+        self.definition = definition
+        magazine = definition.magazineCapacity
+        reserve = definition.reserveAmmo
+    }
+
+    @discardableResult
+    func fire() -> Bool {
+        guard !isReloading, magazine > 0 else { return false }
+        magazine -= 1
+        return true
+    }
+
+    @discardableResult
+    func beginReload() -> Bool {
+        guard !isReloading, magazine < definition.magazineCapacity, reserve > 0 else { return false }
+        isReloading = true
+        reloadRemaining = definition.reloadDuration
+        return true
+    }
+
+    func tick(dt: TimeInterval) {
+        guard isReloading else { return }
+        reloadRemaining = max(0, reloadRemaining - dt)
+        guard reloadRemaining == 0 else { return }
+        let needed = definition.magazineCapacity - magazine
+        let transferred = min(needed, reserve)
+        magazine += transferred
+        reserve -= transferred
+        isReloading = false
+    }
+}
+
 struct RuntimeSpawnPoint: Codable {
     let team: Team
     let x: Double
