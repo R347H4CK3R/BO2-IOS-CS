@@ -49,12 +49,24 @@ jobs:
         run: |
           chmod +x Scripts/build_xash_ios.sh
           ./Scripts/build_xash_ios.sh simulator
+      - name: Package Xash Simulator runtime app
+        run: |
+          chmod +x Scripts/package_xash_runtime.sh
+          ./Scripts/package_xash_runtime.sh simulator
       - uses: actions/upload-artifact@v4
         if: always()
         with:
           name: XashSimulatorEngineBuild
           path: Build/XashSimulator/
           if-no-files-found: warn
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: XashSimulatorRuntimeApp
+          path: |
+            Build/XashSimulatorRuntime/BO2IOSCS.app
+            Build/XashSimulatorRuntime/XASH_SIMULATOR_RUNTIME_REPORT.md
+          if-no-files-found: error
 
   open-source-engine-device-build:
     runs-on: macos-15
@@ -93,6 +105,28 @@ jobs:
             Build/XashRuntime/BO2IOSCS-Xash-bootstrap.ipa
             Build/XashRuntime/XASH_RUNTIME_REPORT.md
             Build/XashRuntime/XASH_IPA_VALIDATION_REPORT.md
+          if-no-files-found: warn
+
+  xash-simulator-runtime-test:
+    needs: open-source-engine-simulator-build
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: XashSimulatorRuntimeApp
+          path: Build/XashSimulatorRuntime
+      - name: Run native Xash Simulator startup test
+        run: |
+          chmod +x Scripts/run_xash_simulator_test.sh
+          ./Scripts/run_xash_simulator_test.sh Build/XashSimulatorRuntime/BO2IOSCS.app
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: XashSimulatorRuntimeResults
+          path: |
+            XASH_SIMULATOR_TEST_REPORT.md
+            Build/XashRuntimeLogs/
           if-no-files-found: warn
 
   simulator-build:
