@@ -71,11 +71,23 @@ jobs:
         run: |
           chmod +x Scripts/build_xash_ios.sh
           ./Scripts/build_xash_ios.sh device
+      - name: Package Xash bootstrap runtime IPA
+        run: |
+          chmod +x Scripts/package_xash_runtime.sh
+          ./Scripts/package_xash_runtime.sh
       - uses: actions/upload-artifact@v4
         if: always()
         with:
           name: XashDeviceEngineBuild
           path: Build/XashDevice/
+          if-no-files-found: warn
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: BO2IOSCS-Xash-bootstrap-IPA
+          path: |
+            Build/XashRuntime/BO2IOSCS-Xash-bootstrap.ipa
+            Build/XashRuntime/XASH_RUNTIME_REPORT.md
           if-no-files-found: warn
 
   simulator-build:
