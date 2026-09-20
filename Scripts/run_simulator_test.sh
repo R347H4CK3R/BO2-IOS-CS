@@ -27,7 +27,22 @@ if [ -z "$UDID" ]; then
 fi
 xcrun simctl shutdown all >/dev/null 2>&1 || true
 xcrun simctl boot "$UDID" 2>/dev/null || true
-if ! xcrun simctl bootstatus "$UDID" -b; then
+xcrun simctl bootstatus "$UDID" -b > Build/RuntimeLogs/bootstatus.log 2>&1 &
+BOOT_PID=$!
+ELAPSED=0
+while kill -0 "$BOOT_PID" 2>/dev/null; do
+  if [ "$ELAPSED" -ge 90 ]; then
+    kill "$BOOT_PID" >/dev/null 2>&1 || true
+    wait "$BOOT_PID" >/dev/null 2>&1 || true
+    echo "- Runtime validation: UNAVAILABLE (simulator boot timed out after 90 seconds)" >> "$REPORT"
+    echo '{"status":"UNAVAILABLE","reason":"simulator boot timeout"}' > "$RESULT"
+    xcrun simctl shutdown "$UDID" >/dev/null 2>&1 || true
+    exit 0
+  fi
+  sleep 2
+  ELAPSED=$((ELAPSED + 2))
+done
+if ! wait "$BOOT_PID"; then
   echo "- Runtime validation: UNAVAILABLE (boot failed)" >> "$REPORT"
   echo '{"status":"UNAVAILABLE","reason":"simulator boot failed"}' > "$RESULT"
   exit 0
