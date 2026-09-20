@@ -2,7 +2,7 @@
 import argparse, hashlib, json, struct
 from pathlib import Path
 from fastfile import parse_fastfile_header
-from ipak import IPakFile
+from ipak import DATA_HASH_MASK, IPakFile
 
 SIGNATURES = {
     b"\x89PNG": ("png", "texture"),
@@ -97,16 +97,82 @@ def scan(source: Path, output: Path):
     }, indent=2))
     return inventory
 
+def extract_ipak_payloads(source: Path, output: Path):
+    texture_root = output / "GameDataIntermediate" / "TexturePayloads"
+    texture_root.mkdir(parents=True, exist_ok=True)
+    records = []
+
+    for ipak_path in sorted(source.rglob("*.ipak")):
+        try:
+            ipak = IPakFile(ipak_path)
+        except Exception as exc:
+            records.append({
+                "source": str(ipak_path.relative_to(source)),
+                "status": "container_error",
+                "error": str(exc),
+            })
+            continue
+
+        package_dir = texture_root / ipak_path.stem
+        package_dir.mkdir(parents=True, exist_ok=True)
+
+        for index, entry in enumerate(ipak.entries):
+            output_name = (
+                f"{index:06d}_{entry.name_hash:08x}_"
+                f"{entry.data_hash & DATA_HASH_MASK:08x}.bin"
+            )
+            output_path = package_dir / output_name
+            try:
+                payload = ipak.extract_entry(entry)
+                output_path.write_bytes(payload)
+                records.append({
+                    "source": str(ipak_path.relative_to(source)),
+                    "entry_index": index,
+                    "name_hash": f"0x{entry.name_hash:08X}",
+                    "data_crc": f"0x{entry.data_hash & DATA_HASH_MASK:08X}",
+                    "stored_region_size": entry.size,
+                    "decoded_size": len(payload),
+                    "status": "decoded_payload",
+                    "generated_output_path": str(output_path.relative_to(output)),
+                })
+            except Exception as exc:
+                records.append({
+                    "source": str(ipak_path.relative_to(source)),
+                    "entry_index": index,
+                    "name_hash": f"0x{entry.name_hash:08X}",
+                    "data_crc": f"0x{entry.data_hash & DATA_HASH_MASK:08X}",
+                    "stored_region_size": entry.size,
+                    "status": "decode_error",
+                    "error": str(exc),
+                })
+
+    report_path = output / "GameDataIntermediate" / "texture_payload_inventory.json"
+    report_path.write_text(json.dumps({
+        "schema": "bo2ioscs-texture-payload-inventory-v1",
+        "records": records,
+    }, indent=2))
+    return records
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--source", required=True)
     parser.add_argument("--output", required=True)
+    parser.add_argument(
+        "--extract-ipak",
+        action="store_true",
+        help="Decode IPAK image payloads into GameDataIntermediate/TexturePayloads",
+    )
     args = parser.parse_args()
     source, output = Path(args.source).expanduser().resolve(), Path(args.output).expanduser().resolve()
     if not source.is_dir():
         raise SystemExit(f"source directory not found: {source}")
     inventory = scan(source, output)
-    print(json.dumps({"status": "ok", "files": inventory["counts"]["total"]}))
+    result = {"status": "ok", "files": inventory["counts"]["total"]}
+    if args.extract_ipak:
+        records = extract_ipak_payloads(source, output)
+        result["ipak_payload_records"] = len(records)
+    print(json.dumps(result))
 
 if __name__ == "__main__":
     main()
