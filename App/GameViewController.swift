@@ -8,6 +8,10 @@ final class GameViewController: UIViewController, SCNSceneRendererDelegate {
     private var weaponState: PlayerWeaponState?
     private var lastTime: TimeInterval = 0
     private var botNodes: [SCNNode] = []
+    private var playerCamera: SCNNode?
+    private var moveInput = CGVector.zero
+    private var yaw: Float = 0
+    private var pitch: Float = 0
     private var frameCount = 0
     private var started = Date()
     private var autotest = false
@@ -72,10 +76,10 @@ final class GameViewController: UIViewController, SCNSceneRendererDelegate {
 
         let camera = SCNNode()
         camera.camera = SCNCamera()
-        camera.position = SCNVector3(0, 4, 12)
-        camera.eulerAngles.x = -.pi / 10
+        camera.position = SCNVector3(0, 1.7, 8)
         scene.rootNode.addChildNode(camera)
         sceneView.pointOfView = camera
+        playerCamera = camera
         RuntimeLog.stage("PLAYER_SPAWNED")
 
         for i in 0..<4 {
@@ -105,24 +109,42 @@ final class GameViewController: UIViewController, SCNSceneRendererDelegate {
     private func setupHUD() {
         let hud = TouchHUD(frame: view.bounds)
         hud.autoresizingMask = [.flexibleWidth, .flexibleHeight]
+        hud.onMove = { [weak self] vector in self?.moveInput = vector }
+        hud.onLook = { [weak self] delta in
+            guard let self else { return }
+            self.yaw -= Float(delta.dx) * 0.004
+            self.pitch = max(-1.2, min(1.2, self.pitch - Float(delta.dy) * 0.004))
+        }
         hud.onAction = { [weak self] action in
             guard let self else { return }
             switch action {
-            case "FIRE":
-                _ = self.weaponState?.fire()
-            case "RELOAD":
-                _ = self.weaponState?.beginReload()
+            case "FIRE": _ = self.weaponState?.fire()
+            case "RELOAD": _ = self.weaponState?.beginReload()
             case "USE":
-                if self.sim.objectiveState == .planted {
-                    self.sim.beginDefuse()
-                } else if self.sim.objectiveState == .idle {
-                    self.sim.beginPlant()
-                }
-            default:
-                break
+                if self.sim.objectiveState == .planted { self.sim.beginDefuse() }
+                else if self.sim.objectiveState == .idle { self.sim.beginPlant() }
+            default: break
             }
         }
         view.addSubview(hud)
+    }
+
+    private func updatePlayer(dt: TimeInterval) {
+        guard let camera = playerCamera else { return }
+        camera.eulerAngles = SCNVector3(pitch, yaw, 0)
+        let speed = Float(5.0 * dt)
+        let forwardX = -sinf(yaw)
+        let forwardZ = -cosf(yaw)
+        let rightX = cosf(yaw)
+        let rightZ = -sinf(yaw)
+        let strafe = Float(moveInput.dx)
+        let forward = Float(moveInput.dy)
+        var p = camera.position
+        p.x += (rightX * strafe + forwardX * forward) * speed
+        p.z += (rightZ * strafe + forwardZ * forward) * speed
+        p.x = max(-15.5, min(15.5, p.x))
+        p.z = max(-10.5, min(10.5, p.z))
+        camera.position = p
     }
 
     func renderer(_ renderer: SCNSceneRenderer, updateAtTime time: TimeInterval) {
@@ -130,6 +152,7 @@ final class GameViewController: UIViewController, SCNSceneRendererDelegate {
         lastTime = time
         sim.tick(dt: dt)
         weaponState?.tick(dt: dt)
+        updatePlayer(dt: dt)
         frameCount += 1
         for (i, node) in botNodes.enumerated() {
             let phase = Float(time * 0.8 + Double(i))
@@ -139,7 +162,7 @@ final class GameViewController: UIViewController, SCNSceneRendererDelegate {
         if autotest && !finished && Date().timeIntervalSince(started) >= 10 {
             finished = true
             let duration = Date().timeIntervalSince(started)
-            let gameDataReady = loadedMapName != "none" && loadedWeaponCount > 0 && weaponState != nil
+            let gameDataReady = loadedMapName != "none" && loadedWeaponCount > 0 && weaponState != nil && playerCamera != nil
             let result: [String: Any] = [
                 "status": gameDataReady ? "PASS" : "FAIL",
                 "duration_seconds": duration,
@@ -151,6 +174,8 @@ final class GameViewController: UIViewController, SCNSceneRendererDelegate {
                 "collision_ready": true,
                 "weapon_fire_worked": sim.shotsFired > 0,
                 "touch_ui_initialized": true,
+                "touch_movement_ready": playerCamera != nil,
+                "touch_look_ready": playerCamera != nil,
                 "normalized_map_loaded": loadedMapName != "none",
                 "loaded_map": loadedMapName,
                 "weapon_definitions_loaded": loadedWeaponCount,
