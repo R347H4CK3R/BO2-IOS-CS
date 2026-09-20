@@ -38,6 +38,14 @@ mkdir -p "$APP"
 cp -R "$SDL_FRAMEWORK" "$APP/SDL2.framework"
 mkdir -p "$APP/bo2ioscs"
 cp -R "$ROOT/GameData/XashBootstrap/bo2ioscs/." "$APP/bo2ioscs/"
+# Integrate project-owned/generated GameData directly into the primary Xash package.
+# Proprietary source dumps remain excluded; only committed safe data and optional
+# locally generated runtime data are copied.
+mkdir -p "$APP/bo2ioscs/GameData"
+cp -R "$ROOT/GameData/." "$APP/bo2ioscs/GameData/"
+if [ -d "$ROOT/GeneratedGameData" ]; then
+  cp -R "$ROOT/GeneratedGameData/." "$APP/bo2ioscs/GameData/"
+fi
 
 cat > "$APP/Info.plist" <<'PLIST'
 <?xml version="1.0" encoding="UTF-8"?>
@@ -99,6 +107,7 @@ if [ "$MODE" = "device" ]; then
   zipinfo -1 "$IPA" > "$OUT/IPA_CONTENTS.txt"
   grep -qx 'Payload/BO2IOSCS.app/xash' "$OUT/IPA_CONTENTS.txt"
   grep -qx 'Payload/BO2IOSCS.app/bo2ioscs/gameinfo.txt' "$OUT/IPA_CONTENTS.txt"
+  grep -qx 'Payload/BO2IOSCS.app/bo2ioscs/GameData/validation_map.json' "$OUT/IPA_CONTENTS.txt"
   grep -qx 'Payload/BO2IOSCS.app/SDL2.framework/SDL2' "$OUT/IPA_CONTENTS.txt"
 
   cat > "$OUT/XASH_RUNTIME_REPORT.md" <<REPORT
@@ -111,7 +120,7 @@ if [ "$MODE" = "device" ]; then
 - game directory: bo2ioscs
 - proprietary assets included: no
 - signing: ad-hoc (intended for later sideload/re-sign workflow)
-- gameplay content: bootstrap metadata only; no converted BO2 map/game DLL is present yet
+- gameplay content: project GameData is integrated into the Xash app bundle; converted BO2 map/game DLL content is included only when legally generated inputs are supplied
 REPORT
 
   echo "Created $IPA"
