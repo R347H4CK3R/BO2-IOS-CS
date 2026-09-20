@@ -36,7 +36,7 @@ if ! xcrun simctl bootstatus "$UDID" -b; then
   exit 0
 fi
 APP=Build/DerivedData/Build/Products/Debug-iphonesimulator/BO2IOSCS.app
-BUNDLE=com.r347h4ck3r.BO2IOSCS
+BUNDLE=com.r347h4ck3r.bo2ioscs
 if ! xcrun simctl install "$UDID" "$APP" > Build/RuntimeLogs/install.log 2>&1; then
   echo "- Runtime validation: FAIL (install failed)" >> "$REPORT"
   echo '{"status":"FAIL","reason":"simulator install failed"}' > "$RESULT"
