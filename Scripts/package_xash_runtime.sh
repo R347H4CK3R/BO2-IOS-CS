@@ -36,7 +36,8 @@ mkdir -p "$APP"
 )
 
 cp -R "$SDL_FRAMEWORK" "$APP/SDL2.framework"
-cp -R "$ROOT/GameData/XashBootstrap/bo2ioscs" "$APP/bo2ioscs"
+mkdir -p "$APP/bo2ioscs"
+cp -R "$ROOT/GameData/XashBootstrap/bo2ioscs/." "$APP/bo2ioscs/"
 
 cat > "$APP/Info.plist" <<'PLIST'
 <?xml version="1.0" encoding="UTF-8"?>
@@ -95,9 +96,10 @@ if [ "$MODE" = "device" ]; then
   IPA="$OUT/BO2IOSCS-Xash-bootstrap.ipa"
   [ -s "$IPA" ] || { echo "Xash bootstrap IPA was not produced"; exit 5; }
 
-  unzip -l "$IPA" | grep -q 'Payload/BO2IOSCS.app/xash'
-  unzip -l "$IPA" | grep -q 'Payload/BO2IOSCS.app/bo2ioscs/gameinfo.txt'
-  unzip -l "$IPA" | grep -q 'Payload/BO2IOSCS.app/SDL2.framework/SDL2'
+  zipinfo -1 "$IPA" > "$OUT/IPA_CONTENTS.txt"
+  grep -qx 'Payload/BO2IOSCS.app/xash' "$OUT/IPA_CONTENTS.txt"
+  grep -qx 'Payload/BO2IOSCS.app/bo2ioscs/gameinfo.txt' "$OUT/IPA_CONTENTS.txt"
+  grep -qx 'Payload/BO2IOSCS.app/SDL2.framework/SDL2' "$OUT/IPA_CONTENTS.txt"
 
   cat > "$OUT/XASH_RUNTIME_REPORT.md" <<REPORT
 # Xash runtime package
