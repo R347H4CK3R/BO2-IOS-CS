@@ -43,33 +43,46 @@ if ! xcrun simctl install "$UDID" "$APP" > Build/RuntimeLogs/install.log 2>&1; t
   xcrun simctl shutdown "$UDID" >/dev/null 2>&1 || true
   exit 1
 fi
-python3 - "$UDID" "$BUNDLE" <<'PY' > Build/RuntimeLogs/launch.log 2>&1
-import os, subprocess, sys
-udid, bundle = sys.argv[1], sys.argv[2]
-env = dict(os.environ)
-env['SIMCTL_CHILD_AUTOTEST'] = '1'
-try:
-    p = subprocess.run(['xcrun','simctl','launch','--terminate-running-process',udid,bundle,'--autotest'], env=env, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, timeout=30)
-    print(p.stdout)
-    print('launch_returncode=', p.returncode)
-    sys.exit(p.returncode)
-except subprocess.TimeoutExpired as e:
-    print('launch timeout')
-    print(e.stdout or '')
-    sys.exit(124)
-PY
-LAUNCH_RC=$?
-if [ "$LAUNCH_RC" -ne 0 ]; then
+# simctl launch can hang on hosted runners even after the application starts.
+# Run it asynchronously and validate the app by its AUTOTEST result instead of
+# treating a stuck simctl client as an application launch failure.
+SIMCTL_CHILD_AUTOTEST=1 xcrun simctl launch --terminate-running-process "$UDID" "$BUNDLE" --autotest > Build/RuntimeLogs/launch.log 2>&1 &
+LAUNCH_PID=$!
+LAUNCHED=0
+for _ in $(seq 1 30); do
+  if xcrun simctl get_app_container "$UDID" "$BUNDLE" data >/dev/null 2>&1; then
+    LAUNCHED=1
+    break
+  fi
+  if ! kill -0 "$LAUNCH_PID" 2>/dev/null; then
+    wait "$LAUNCH_PID"
+    LAUNCH_RC=$?
+    if [ "$LAUNCH_RC" -ne 0 ]; then
+      break
+    fi
+  fi
+  sleep 1
+done
+# Do not leave a wedged simctl client consuming the runner.
+if kill -0 "$LAUNCH_PID" 2>/dev/null; then
+  kill "$LAUNCH_PID" >/dev/null 2>&1 || true
+  wait "$LAUNCH_PID" 2>/dev/null || true
+fi
+if [ "$LAUNCHED" -ne 1 ]; then
   xcrun simctl spawn "$UDID" log show --last 3m --style compact --predicate 'process == "BO2IOSCS" OR eventMessage CONTAINS "[BO2IOSCS]"' > Build/RuntimeLogs/application.log 2>&1 || true
-  echo "- Runtime validation: FAIL (launch failed, rc=$LAUNCH_RC)" >> "$REPORT"
+  echo "- Runtime validation: FAIL (application container unavailable after launch)" >> "$REPORT"
   echo '{"status":"FAIL","reason":"simulator launch failed"}' > "$RESULT"
   xcrun simctl shutdown "$UDID" >/dev/null 2>&1 || true
   exit 1
 fi
-sleep 14
+# Give the in-app autotest enough time to emit its result.
+DATA="$(xcrun simctl get_app_container "$UDID" "$BUNDLE" data 2>/dev/null || true)"
+for _ in $(seq 1 30); do
+  [ -n "$DATA" ] && [ -f "$DATA/Documents/Logs/AUTOTEST_RESULT.json" ] && break
+  sleep 1
+done
 xcrun simctl io "$UDID" screenshot Build/RuntimeLogs/simulator.png >/dev/null 2>&1 || true
 xcrun simctl spawn "$UDID" log show --last 4m --style compact --predicate 'process == "BO2IOSCS" OR eventMessage CONTAINS "[BO2IOSCS]"' > Build/RuntimeLogs/application.log 2>&1 || true
-DATA="$(xcrun simctl get_app_container "$UDID" "$BUNDLE" data 2>/dev/null || true)"
 STATUS=FAIL
 if [ -n "$DATA" ] && [ -f "$DATA/Documents/Logs/AUTOTEST_RESULT.json" ]; then
   cp "$DATA/Documents/Logs/AUTOTEST_RESULT.json" "$RESULT"
