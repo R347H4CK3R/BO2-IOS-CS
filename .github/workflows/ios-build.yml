@@ -107,7 +107,7 @@ jobs:
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: BO2IOSCS-Xash-bootstrap-IPA
+          name: BO2IOSCS-Xash-integrated-IPA
           path: |
             Build/XashRuntime/BO2IOSCS-Xash-bootstrap.ipa
             Build/XashRuntime/XASH_RUNTIME_REPORT.md
