@@ -1,0 +1,17 @@
+{
+  "schema": "bo2ioscs-texture-metadata-v1",
+  "textures": [
+    {
+      "name_hash": "0x00000000",
+      "data_crc": null,
+      "name": "example_only",
+      "width": 256,
+      "height": 256,
+      "depth": 1,
+      "mip_count": 1,
+      "format": "BC1",
+      "layout": "linear",
+      "normal_map": false
+    }
+  ]
+}
