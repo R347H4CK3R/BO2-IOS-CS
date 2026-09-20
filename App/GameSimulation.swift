@@ -27,12 +27,24 @@ struct RuntimeBox: Codable {
     let sz: Double
 }
 
+struct RuntimeObjective: Codable {
+    let type: String
+    let x: Double
+    let y: Double
+    let z: Double
+    let radius: Double
+    let plantDuration: Double
+    let fuseDuration: Double
+    let defuseDuration: Double
+}
+
 struct RuntimeMapDefinition: Codable {
     let name: String
     let format: String
     let worldScale: Double
     let spawnPoints: [RuntimeSpawnPoint]
     let boxes: [RuntimeBox]
+    let objective: RuntimeObjective?
 }
 
 enum GameDataLoader {
@@ -59,6 +71,7 @@ enum GameDataLoader {
 }
 
 enum Team: String, Codable { case attack, defense }
+enum ObjectiveState: String, Codable { case idle, planting, planted, defusing, detonated, defused }
 
 final class BotState {
     let id: Int
@@ -75,10 +88,26 @@ final class MatchSimulation {
     private(set) var elapsed: TimeInterval = 0
     private(set) var shotsFired = 0
     private(set) var objectiveTicks = 0
+    private(set) var objectiveState: ObjectiveState = .idle
+    private(set) var objectiveElapsed: TimeInterval = 0
     let bots: [BotState]
+    let objective: RuntimeObjective?
 
-    init(botCount: Int = 4) {
+    init(botCount: Int = 4, objective: RuntimeObjective? = nil) {
+        self.objective = objective
         bots = (0..<botCount).map { BotState(id: $0, team: $0.isMultiple(of: 2) ? .attack : .defense) }
+    }
+
+    func beginPlant() {
+        guard objective != nil, objectiveState == .idle else { return }
+        objectiveState = .planting
+        objectiveElapsed = 0
+    }
+
+    func beginDefuse() {
+        guard objective != nil, objectiveState == .planted else { return }
+        objectiveState = .defusing
+        objectiveElapsed = 0
     }
 
     func tick(dt: TimeInterval) {
@@ -88,10 +117,36 @@ final class MatchSimulation {
             shotsFired += 1
             if !bots.isEmpty { bots[shotsFired % bots.count].shots += 1 }
         }
+        if let objective {
+            switch objectiveState {
+            case .planting:
+                objectiveElapsed += dt
+                if objectiveElapsed >= objective.plantDuration {
+                    objectiveState = .planted
+                    objectiveElapsed = 0
+                }
+            case .planted:
+                objectiveElapsed += dt
+                if objectiveElapsed >= objective.fuseDuration {
+                    objectiveState = .detonated
+                    scoreAttack += 1
+                }
+            case .defusing:
+                objectiveElapsed += dt
+                if objectiveElapsed >= objective.defuseDuration {
+                    objectiveState = .defused
+                    scoreDefense += 1
+                }
+            case .idle, .detonated, .defused:
+                break
+            }
+        }
         if elapsed >= 120 {
-            scoreAttack += 1
+            if objectiveState == .idle { scoreDefense += 1 }
             round += 1
             elapsed = 0
+            objectiveElapsed = 0
+            objectiveState = .idle
         }
     }
 }
