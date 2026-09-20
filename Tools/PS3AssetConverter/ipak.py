@@ -1,0 +1,176 @@
+from __future__ import annotations
+
+from dataclasses import asdict, dataclass
+from pathlib import Path
+import struct
+
+IPAK_MAGIC = b"IPAK"
+IPAK_VERSION = 0x50000
+CHUNK_SIZE = 0x8000
+BLOCK_ALIGN = 0x80
+BLOCK_HEADER_SIZE = 0x80
+
+
+@dataclass
+class IPakSection:
+    type: int
+    offset: int
+    size: int
+    item_count: int
+
+    def to_dict(self):
+        return asdict(self)
+
+
+@dataclass
+class IPakIndexEntry:
+    data_hash: int
+    name_hash: int
+    offset: int
+    size: int
+
+    def to_dict(self):
+        return asdict(self)
+
+
+@dataclass
+class IPakCommand:
+    compressed: int
+    size: int
+
+    def to_dict(self):
+        return asdict(self)
+
+
+@dataclass
+class IPakBlockHeader:
+    relative_offset: int
+    file_offset: int
+    output_offset: int
+    command_count: int
+    commands: list[IPakCommand]
+
+    def to_dict(self):
+        return asdict(self)
+
+
+class IPakFile:
+    def __init__(self, path: Path):
+        self.path = Path(path)
+        self.data = self.path.read_bytes()
+        self.sections: list[IPakSection] = []
+        self.entries: list[IPakIndexEntry] = []
+        self._parse()
+
+    def _u32(self, offset: int) -> int:
+        return struct.unpack_from(">I", self.data, offset)[0]
+
+    def _parse(self):
+        if len(self.data) < 16:
+            raise ValueError("IPAK too small")
+        if self.data[:4] != IPAK_MAGIC:
+            raise ValueError("invalid IPAK magic")
+
+        self.version = self._u32(4)
+        self.declared_size = self._u32(8)
+        self.section_count = self._u32(12)
+
+        if self.version != IPAK_VERSION:
+            raise ValueError(f"unsupported IPAK version 0x{self.version:X}")
+        if self.declared_size and self.declared_size != len(self.data):
+            raise ValueError(
+                f"declared IPAK size {self.declared_size} does not match actual size {len(self.data)}"
+            )
+        if len(self.data) % CHUNK_SIZE != 0:
+            raise ValueError("IPAK file size is not aligned to 0x8000-byte chunks")
+
+        section_offset = 16
+        for _ in range(self.section_count):
+            if section_offset + 16 > len(self.data):
+                raise ValueError("truncated IPAK section table")
+            section = IPakSection(
+                type=self._u32(section_offset),
+                offset=self._u32(section_offset + 4),
+                size=self._u32(section_offset + 8),
+                item_count=self._u32(section_offset + 12),
+            )
+            section_offset += 16
+            if section.offset % CHUNK_SIZE != 0:
+                raise ValueError(f"section at 0x{section.offset:X} is not chunk-aligned")
+            if section.offset + section.size > len(self.data):
+                raise ValueError("IPAK section exceeds file size")
+            self.sections.append(section)
+
+        self.data_section = next((s for s in self.sections if s.type == 2), None)
+        self.index_section = next((s for s in self.sections if s.type == 1), None)
+
+        if self.index_section:
+            required = self.index_section.item_count * 16
+            if required > self.index_section.size:
+                raise ValueError("IPAK index item count exceeds index section size")
+            for i in range(self.index_section.item_count):
+                entry_offset = self.index_section.offset + i * 16
+                self.entries.append(
+                    IPakIndexEntry(
+                        data_hash=self._u32(entry_offset),
+                        name_hash=self._u32(entry_offset + 4),
+                        offset=self._u32(entry_offset + 8),
+                        size=self._u32(entry_offset + 12),
+                    )
+                )
+
+    def parse_block(self, relative_offset: int) -> IPakBlockHeader:
+        if not self.data_section:
+            raise ValueError("IPAK has no data section")
+        if relative_offset % BLOCK_ALIGN != 0:
+            raise ValueError("IPAK block is not 0x80-byte aligned")
+
+        file_offset = self.data_section.offset + relative_offset
+        data_end = self.data_section.offset + self.data_section.size
+        if file_offset + BLOCK_HEADER_SIZE > data_end:
+            raise ValueError("IPAK block header exceeds data section")
+
+        # On the PS3/big-endian variant the one-byte bitfield portions are
+        # serialized first, followed by the 24-bit numeric field.
+        command_count = self.data[file_offset]
+        output_offset = int.from_bytes(self.data[file_offset + 1 : file_offset + 4], "big")
+
+        if command_count > 31:
+            raise ValueError("IPAK block command count exceeds 31")
+
+        commands: list[IPakCommand] = []
+        for command_index in range(command_count):
+            command_offset = file_offset + 4 + command_index * 4
+            compressed = self.data[command_offset]
+            stored_size = int.from_bytes(
+                self.data[command_offset + 1 : command_offset + 4], "big"
+            )
+            commands.append(IPakCommand(compressed=compressed, size=stored_size))
+
+        return IPakBlockHeader(
+            relative_offset=relative_offset,
+            file_offset=file_offset,
+            output_offset=output_offset,
+            command_count=command_count,
+            commands=commands,
+        )
+
+    def inventory(self):
+        entries = []
+        for entry in self.entries:
+            item = entry.to_dict()
+            try:
+                item["first_block"] = self.parse_block(entry.offset).to_dict()
+            except Exception as exc:
+                item["block_error"] = str(exc)
+            entries.append(item)
+
+        return {
+            "magic": "IPAK",
+            "version": self.version,
+            "declared_size": self.declared_size,
+            "actual_size": len(self.data),
+            "chunk_size": CHUNK_SIZE,
+            "sections": [section.to_dict() for section in self.sections],
+            "entries": entries,
+        }
