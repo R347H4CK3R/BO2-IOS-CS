@@ -43,44 +43,32 @@ if ! xcrun simctl install "$UDID" "$APP" > Build/RuntimeLogs/install.log 2>&1; t
   xcrun simctl shutdown "$UDID" >/dev/null 2>&1 || true
   exit 1
 fi
-# simctl launch can hang on hosted runners even after the application starts.
-# Run it asynchronously and validate the app by its AUTOTEST result instead of
-# treating a stuck simctl client as an application launch failure.
+DATA="$(xcrun simctl get_app_container "$UDID" "$BUNDLE" data 2>/dev/null || true)"
+# Hosted runners can leave simctl launch itself blocked while the application is
+# healthy. Keep that client alive while the in-app autotest runs; an installed
+# data container alone is not evidence that launch has completed.
 SIMCTL_CHILD_AUTOTEST=1 xcrun simctl launch --terminate-running-process "$UDID" "$BUNDLE" --autotest > Build/RuntimeLogs/launch.log 2>&1 &
 LAUNCH_PID=$!
-LAUNCHED=0
-for _ in $(seq 1 30); do
-  if xcrun simctl get_app_container "$UDID" "$BUNDLE" data >/dev/null 2>&1; then
-    LAUNCHED=1
+for _ in $(seq 1 45); do
+  if [ -n "$DATA" ] && [ -f "$DATA/Documents/Logs/AUTOTEST_RESULT.json" ]; then
     break
   fi
+  # If simctl returned, retain its exit status for diagnostics but still allow
+  # a launched app a short window to publish the result.
   if ! kill -0 "$LAUNCH_PID" 2>/dev/null; then
-    wait "$LAUNCH_PID"
+    wait "$LAUNCH_PID" 2>/dev/null
     LAUNCH_RC=$?
     if [ "$LAUNCH_RC" -ne 0 ]; then
+      sleep 3
       break
     fi
   fi
   sleep 1
 done
-# Do not leave a wedged simctl client consuming the runner.
 if kill -0 "$LAUNCH_PID" 2>/dev/null; then
   kill "$LAUNCH_PID" >/dev/null 2>&1 || true
   wait "$LAUNCH_PID" 2>/dev/null || true
 fi
-if [ "$LAUNCHED" -ne 1 ]; then
-  xcrun simctl spawn "$UDID" log show --last 3m --style compact --predicate 'process == "BO2IOSCS" OR eventMessage CONTAINS "[BO2IOSCS]"' > Build/RuntimeLogs/application.log 2>&1 || true
-  echo "- Runtime validation: FAIL (application container unavailable after launch)" >> "$REPORT"
-  echo '{"status":"FAIL","reason":"simulator launch failed"}' > "$RESULT"
-  xcrun simctl shutdown "$UDID" >/dev/null 2>&1 || true
-  exit 1
-fi
-# Give the in-app autotest enough time to emit its result.
-DATA="$(xcrun simctl get_app_container "$UDID" "$BUNDLE" data 2>/dev/null || true)"
-for _ in $(seq 1 30); do
-  [ -n "$DATA" ] && [ -f "$DATA/Documents/Logs/AUTOTEST_RESULT.json" ] && break
-  sleep 1
-done
 xcrun simctl io "$UDID" screenshot Build/RuntimeLogs/simulator.png >/dev/null 2>&1 || true
 xcrun simctl spawn "$UDID" log show --last 4m --style compact --predicate 'process == "BO2IOSCS" OR eventMessage CONTAINS "[BO2IOSCS]"' > Build/RuntimeLogs/application.log 2>&1 || true
 STATUS=FAIL
