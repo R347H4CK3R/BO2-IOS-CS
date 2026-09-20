@@ -75,6 +75,10 @@ jobs:
         run: |
           chmod +x Scripts/package_xash_runtime.sh
           ./Scripts/package_xash_runtime.sh
+      - name: Validate Xash bootstrap runtime IPA
+        run: |
+          chmod +x Tools/validate_xash_ipa.sh
+          ./Tools/validate_xash_ipa.sh Build/XashRuntime/BO2IOSCS-Xash-bootstrap.ipa Build/XashRuntime/XASH_IPA_VALIDATION_REPORT.md
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -88,6 +92,7 @@ jobs:
           path: |
             Build/XashRuntime/BO2IOSCS-Xash-bootstrap.ipa
             Build/XashRuntime/XASH_RUNTIME_REPORT.md
+            Build/XashRuntime/XASH_IPA_VALIDATION_REPORT.md
           if-no-files-found: warn
 
   simulator-build:
