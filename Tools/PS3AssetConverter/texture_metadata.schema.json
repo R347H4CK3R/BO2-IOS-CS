@@ -2,29 +2,97 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "title": "BO2 iOS CS Texture Metadata Map",
   "type": "object",
-  "required": ["schema", "textures"],
+  "required": [
+    "schema",
+    "textures"
+  ],
   "properties": {
-    "schema": { "const": "bo2ioscs-texture-metadata-v1" },
+    "schema": {
+      "const": "bo2ioscs-texture-metadata-v1"
+    },
     "textures": {
       "type": "array",
       "items": {
         "type": "object",
-        "required": ["name_hash", "width", "height", "format", "layout"],
+        "required": [
+          "name_hash",
+          "width",
+          "height",
+          "format",
+          "layout"
+        ],
         "properties": {
-          "name_hash": { "type": "string", "pattern": "^0x[0-9A-Fa-f]{8}$" },
-          "data_crc": { "type": ["string", "null"], "pattern": "^0x[0-9A-Fa-f]{8}$" },
-          "name": { "type": ["string", "null"] },
-          "width": { "type": "integer", "minimum": 1, "maximum": 16384 },
-          "height": { "type": "integer", "minimum": 1, "maximum": 16384 },
-          "depth": { "type": "integer", "minimum": 1, "default": 1 },
-          "mip_count": { "type": "integer", "minimum": 1, "default": 1 },
+          "name_hash": {
+            "type": "string",
+            "pattern": "^0x[0-9A-Fa-f]{8}$"
+          },
+          "data_crc": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "pattern": "^0x[0-9A-Fa-f]{8}$"
+          },
+          "name": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "width": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 16384
+          },
+          "height": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 16384
+          },
+          "depth": {
+            "type": "integer",
+            "minimum": 1,
+            "default": 1
+          },
+          "mip_count": {
+            "type": "integer",
+            "minimum": 1,
+            "default": 1
+          },
           "format": {
-            "enum": ["BC1", "BC2", "BC3", "BC4", "BC5", "RGBA8", "BGRA8", "UNKNOWN"]
+            "enum": [
+              "BC1",
+              "BC2",
+              "BC3",
+              "BC4",
+              "BC5",
+              "RGBA8",
+              "BGRA8",
+              "UNKNOWN"
+            ]
           },
           "layout": {
-            "enum": ["linear", "ps3_tiled", "ps3_swizzled", "unknown"]
+            "enum": [
+              "linear",
+              "ps3_tiled",
+              "ps3_swizzled",
+              "unknown"
+            ]
           },
-          "normal_map": { "type": "boolean", "default": false }
+          "normal_map": {
+            "type": "boolean",
+            "default": false
+          },
+          "swizzle": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "enum": [
+              "morton2d",
+              null
+            ]
+          }
         },
         "additionalProperties": true
       }
