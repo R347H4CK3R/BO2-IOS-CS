@@ -78,6 +78,8 @@ final class BotState {
     let team: Team
     var health = 100
     var shots = 0
+    var deaths = 0
+    var alive: Bool { health > 0 }
     init(id: Int, team: Team) { self.id = id; self.team = team }
 }
 
@@ -89,6 +91,7 @@ final class MatchSimulation {
     private(set) var shotsFired = 0
     private(set) var objectiveTicks = 0
     private(set) var objectiveState: ObjectiveState = .idle
+    private(set) var eliminations = 0
     private(set) var objectiveElapsed: TimeInterval = 0
     let bots: [BotState]
     let objective: RuntimeObjective?
@@ -96,6 +99,43 @@ final class MatchSimulation {
     init(botCount: Int = 4, objective: RuntimeObjective? = nil) {
         self.objective = objective
         bots = (0..<botCount).map { BotState(id: $0, team: $0.isMultiple(of: 2) ? .attack : .defense) }
+    }
+
+    @discardableResult
+    func fire(weapon: WeaponDefinition, from shooterID: Int, at targetID: Int) -> Bool {
+        guard shooterID != targetID,
+              bots.indices.contains(shooterID), bots.indices.contains(targetID),
+              bots[shooterID].alive, bots[targetID].alive,
+              bots[shooterID].team != bots[targetID].team else { return false }
+        bots[shooterID].shots += 1
+        shotsFired += 1
+        bots[targetID].health = max(0, bots[targetID].health - Int(weapon.damage.rounded()))
+        if bots[targetID].health == 0 {
+            bots[targetID].deaths += 1
+            eliminations += 1
+            resolveEliminationRoundIfNeeded()
+        }
+        return true
+    }
+
+    private func resolveEliminationRoundIfNeeded() {
+        let attackersAlive = bots.contains { $0.team == .attack && $0.alive }
+        let defendersAlive = bots.contains { $0.team == .defense && $0.alive }
+        if !defendersAlive && attackersAlive {
+            scoreAttack += 1
+            resetRound()
+        } else if !attackersAlive && defendersAlive {
+            scoreDefense += 1
+            resetRound()
+        }
+    }
+
+    private func resetRound() {
+        round += 1
+        elapsed = 0
+        objectiveElapsed = 0
+        objectiveState = .idle
+        for bot in bots { bot.health = 100 }
     }
 
     func beginPlant() {
@@ -143,10 +183,7 @@ final class MatchSimulation {
         }
         if elapsed >= 120 {
             if objectiveState == .idle { scoreDefense += 1 }
-            round += 1
-            elapsed = 0
-            objectiveElapsed = 0
-            objectiveState = .idle
+            resetRound()
         }
     }
 }
