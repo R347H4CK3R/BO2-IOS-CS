@@ -1,0 +1,10 @@
+{
+  "name": "SyntheticTrainingYard",
+  "license": "project-original",
+  "world_scale": 1.0,
+  "spawn_points": [
+    {"team":"attack","position":[-6,1,6]},
+    {"team":"defense","position":[6,1,-6]}
+  ],
+  "objective": {"type":"plant_defuse","position":[0,0,0]}
+}
