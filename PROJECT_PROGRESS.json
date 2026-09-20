@@ -8,9 +8,9 @@
     "PS3 tiled/swizzled image layouts still require explicit authoritative layout metadata and a validated untile/unswizzle implementation; the converter intentionally does not guess missing metadata."
   ],
   "last_successful_build": {
-    "workflow_run": 35516096442,
-    "run_number": 54,
-    "commit": "d9585dc1841ac75442b9a7a9fe360b735c839584"
+    "workflow_run": 35519318619,
+    "run_number": 55,
+    "commit": "8301d118557fa292c4b90cc9d38ae5e2c10b4eef"
   },
   "simulator_test_status": "PASS - app simulator runtime test and native pinned Xash3D FWGS simulator startup test",
   "device_build_status": "PASS - unsigned ARM64 app build and pinned Xash3D FWGS ARM64 device engine build",
