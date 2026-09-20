@@ -18,6 +18,7 @@ clone_pinned() {
   fi
   git -C "$dir" fetch --depth=1 origin "$sha"
   git -C "$dir" checkout --detach "$sha"
+  git -C "$dir" reset --hard "$sha"
 }
 
 build_sdl_framework() {
@@ -53,6 +54,42 @@ build_sdl_framework() {
 clone_pinned https://github.com/libsdl-org/SDL.git "$SDL" "$SDL2_SHA"
 clone_pinned https://github.com/FWGS/xash3d-fwgs.git "$XASH" "$XASH_SHA"
 git -C "$XASH" submodule update --init --recursive --depth=1
+
+# Preserve normal Xash iOS behavior, but add a project-only automation path
+# for Simulator CI so the native UIAlert launch dialog does not block simctl.
+python3 - "$XASH/engine/platform/ios/launchdialog.m" <<'PY'
+from pathlib import Path
+import sys
+
+path = Path(sys.argv[1])
+text = path.read_text()
+needle = """void IOS_LaunchDialog( void )
+{
+"""
+replacement = """void IOS_LaunchDialog( void )
+{
+	const char *autotest = getenv( "BO2IOSCS_AUTOTEST" );
+	if( autotest && autotest[0] == '1' )
+	{
+		const char *testargs[] = { "xash", "-dev", "2", "-log", "-console" };
+		const int count = (int)( sizeof( testargs ) / sizeof( testargs[0] ) );
+
+		[[NSFileManager defaultManager]
+			changeCurrentDirectoryPath:[NSString stringWithUTF8String:IOS_GetDocsDir()]];
+
+		szArgc = count;
+		szArgv = calloc( count + 1, sizeof( char * ) );
+		for( int i = 0; i < count; ++i )
+			szArgv[i] = strdup( testargs[i] );
+		szArgv[count] = 0;
+		NSLog( @"BO2IOSCS_AUTOTEST launch path enabled" );
+		return;
+	}
+"""
+if needle not in text:
+    raise SystemExit("Xash iOS launchdialog patch anchor not found")
+path.write_text(text.replace(needle, replacement, 1))
+PY
 
 case "$MODE" in
   simulator)
