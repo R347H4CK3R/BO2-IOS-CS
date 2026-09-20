@@ -40,6 +40,24 @@ final class BO2IOSCSTests: XCTestCase {
         XCTAssertEqual(sim.bots[2].health, 100)
     }
 
+    func testPlayerAmmoAndReloadCycle() {
+        let weapon = WeaponDefinition(id: "test_rifle", damage: 30, fireRate: 9,
+                                      magazineCapacity: 2, reserveAmmo: 3,
+                                      reloadDuration: 1, recoil: 0.9, spread: 0.02)
+        let state = PlayerWeaponState(definition: weapon)
+        XCTAssertTrue(state.fire())
+        XCTAssertTrue(state.fire())
+        XCTAssertFalse(state.fire())
+        XCTAssertEqual(state.magazine, 0)
+        XCTAssertTrue(state.beginReload())
+        state.tick(dt: 0.5)
+        XCTAssertTrue(state.isReloading)
+        state.tick(dt: 0.5)
+        XCTAssertFalse(state.isReloading)
+        XCTAssertEqual(state.magazine, 2)
+        XCTAssertEqual(state.reserve, 1)
+    }
+
     func testPlantAndDetonationScoresAttack() {
         let objective = RuntimeObjective(type: "plant_defuse", x: 0, y: 0, z: 0,
                                          radius: 2.5, plantDuration: 1, fuseDuration: 2,
