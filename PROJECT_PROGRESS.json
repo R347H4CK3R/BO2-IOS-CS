@@ -1,0 +1,10 @@
+{
+  "current_phase": 2,
+  "completed_phases": [1],
+  "failed_tests": [],
+  "known_blockers": [],
+  "last_successful_build": null,
+  "simulator_test_status": null,
+  "device_build_status": null,
+  "ipa_path": null
+}
