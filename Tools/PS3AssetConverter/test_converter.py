@@ -1,6 +1,7 @@
 import json, tempfile, unittest
 from pathlib import Path
 from convert_assets import detect, endian_probe, load_texture_metadata, scan
+from runtime_texture import expected_payload_size, write_runtime_texture
 
 class ConverterTests(unittest.TestCase):
     def test_signature_and_endian(self):
@@ -32,5 +33,32 @@ class ConverterTests(unittest.TestCase):
             item = {"name_hash":"0x1234ABCD","width":1,"height":1,"format":"RGBA8","layout":"linear"}
             p.write_text(json.dumps({"schema":"bo2ioscs-texture-metadata-v1","textures":[item,item]}))
             with self.assertRaises(ValueError): load_texture_metadata(p)
+
+    def test_linear_bc1_runtime_texture_writer(self):
+        with tempfile.TemporaryDirectory() as d:
+            meta = {"width":8,"height":8,"format":"BC1","layout":"linear"}
+            payload = bytes(range(expected_payload_size(8, 8, "BC1")))
+            result = write_runtime_texture(payload, meta, Path(d) / "texture")
+            self.assertEqual(result["status"], "runtime_texture_generated")
+            data = Path(result["path"]).read_bytes()
+            self.assertEqual(data[:4], b"DDS ")
+            self.assertEqual(len(data), 128 + len(payload))
+
+    def test_runtime_texture_writer_rejects_unvalidated_layout_and_bad_size(self):
+        with tempfile.TemporaryDirectory() as d:
+            base = {"width":4,"height":4,"format":"BC1","layout":"ps3_tiled"}
+            result = write_runtime_texture(b"12345678", base, Path(d) / "texture")
+            self.assertEqual(result["status"], "layout_conversion_required")
+            base["layout"] = "linear"
+            result = write_runtime_texture(b"short", base, Path(d) / "texture")
+            self.assertEqual(result["status"], "payload_size_mismatch")
+
+    def test_rgba8_runtime_texture_channel_conversion(self):
+        with tempfile.TemporaryDirectory() as d:
+            meta = {"width":1,"height":1,"format":"RGBA8","layout":"linear"}
+            result = write_runtime_texture(bytes((1,2,3,4)), meta, Path(d) / "pixel")
+            data = Path(result["path"]).read_bytes()
+            self.assertEqual(data[:3], bytes((0,0,2)))
+            self.assertEqual(data[18:], bytes((3,2,1,4)))
 
 if __name__ == "__main__": unittest.main()
