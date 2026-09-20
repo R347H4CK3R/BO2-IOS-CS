@@ -21,7 +21,11 @@ fail() {
 [ -f "$APP/bo2ioscs/gameinfo.txt" ] || fail "bootstrap gameinfo missing"
 
 EXEC_TYPE="$(file "$APP/xash")"
-echo "$EXEC_TYPE" | grep -q "Mach-O 64-bit arm64 executable" || fail "xash is not an ARM64 Mach-O executable"
+# `file` describes thin binaries as "Mach-O 64-bit executable arm64" and may
+# describe universal binaries differently. Validate the actual Mach-O slices
+# with lipo instead of depending on word order in human-readable `file` output.
+ARCHS="$(lipo -archs "$APP/xash" 2>/dev/null || true)"
+echo "$ARCHS" | tr ' ' '\n' | grep -qx 'arm64' || fail "xash has no ARM64 Mach-O slice: $EXEC_TYPE"
 
 find "$APP" -name '*.dylib' -type f -print > "$TMP/dylibs.txt"
 grep -q 'libref_gles1.dylib' "$TMP/dylibs.txt" || fail "GLES1 renderer missing"
@@ -45,7 +49,7 @@ cat > "$REPORT" <<EOF
 - status: PASS
 - bundle id: $BUNDLE_ID
 - executable: $EXEC_NAME
-- architecture: arm64
+- architecture slices: $ARCHS
 - bundled dylibs: $DYLIB_COUNT
 - SDL2 framework: present
 - bootstrap gameinfo: present
