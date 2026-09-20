@@ -22,3 +22,15 @@ User-owned BO2 PS3 data remains external in Google Drive. No proprietary PS3 byt
 ## Remaining major work
 
 The current executable runtime is a temporary native Swift/SceneKit bootstrap. The project is not complete until an appropriate open-source engine/runtime is integrated and the real PS3 asset converter can produce usable map, texture, model, animation, and audio data from the user's local source files.
+
+## Validated CI milestone
+
+- GitHub Actions run #8 (run 35485545921) passed source validation, converter unit tests, iPhone 16 Plus Simulator AUTOTEST, ARM64 device build, unsigned IPA packaging, and IPA structural validation.
+- Simulator AUTOTEST ran ~10 seconds with 4 bots, frame updates, collision-ready state, weapon-fire simulation, objective ticks, and touch HUD initialization.
+- Device IPA remains unsigned and was not executed in Simulator.
+
+## Real BO2 source discovery
+
+- User-owned PS3 source was inspected through Google Drive without committing proprietary bytes.
+- Sample fastfiles identify as TAff0100, big-endian version 0x92, PHEEBs71 authenticated headers with a 256-byte signature area and encrypted/compressed payload after offset 312.
+- The converter parses and inventories this header but deliberately does not decrypt the payload. Real zone conversion therefore requires user-provided decrypted/normalized data.
