@@ -2,6 +2,7 @@
 import argparse, hashlib, json, struct
 from pathlib import Path
 from fastfile import parse_fastfile_header
+from ipak import IPakFile
 
 SIGNATURES = {
     b"\x89PNG": ("png", "texture"),
@@ -18,6 +19,7 @@ def detect(path: Path):
             return result
     ext = path.suffix.lower()
     if ext == ".ff": return "bo2_fastfile", "container"
+    if ext == ".ipak": return "bo2_ipak", "texture_container"
     if ext in {".bsp", ".map"}: return ext[1:], "map"
     if ext in {".wav", ".mp3", ".at3", ".at9"}: return ext[1:], "audio"
     if ext in {".png", ".dds", ".tga", ".jpg", ".jpeg"}: return ext[1:], "texture"
@@ -52,6 +54,23 @@ def scan(source: Path, output: Path):
                 "warnings": [] if fmt != "unknown" else ["Unknown format preserved for diagnostics"],
                 "errors": []
             }
+            if fmt == "bo2_ipak":
+                try:
+                    ipak = IPakFile(p)
+                    inv = ipak.inventory()
+                    row["ipak"] = inv
+                    row["endianness"] = "big"
+                    row["compression"] = "mixed LZO/uncompressed block commands"
+                    row["conversion_status"] = "indexed"
+                    row["converter_used"] = "ipak.py"
+                    row["warnings"] = [
+                        "IPAK image records are identified by hashes rather than source filenames.",
+                        "Texture payload decoding/export is a later conversion stage."
+                    ]
+                except Exception as exc:
+                    row["conversion_status"] = "header_parse_error"
+                    row["errors"].append(str(exc))
+
             if fmt == "bo2_fastfile":
                 try:
                     header = parse_fastfile_header(p)
