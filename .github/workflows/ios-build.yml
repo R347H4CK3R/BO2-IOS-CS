@@ -45,9 +45,7 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           name: SimulatorBuild
-          path: |
-            Build/SimulatorBuild.zip
-            Build/DerivedData/Build/Products/Debug-iphonesimulator/BO2IOSCS.app
+          path: Build/SimulatorBuild.zip
 
   simulator-runtime-test:
     needs: simulator-build
@@ -59,8 +57,11 @@ jobs:
           name: SimulatorBuild
           path: downloaded
       - run: |
-          mkdir -p Build/DerivedData/Build/Products/Debug-iphonesimulator
-          cp -R downloaded/BO2IOSCS.app Build/DerivedData/Build/Products/Debug-iphonesimulator/
+          mkdir -p Build/DerivedData/Build/Products/Debug-iphonesimulator Build/UnpackedSimulator
+          ZIP="$(find downloaded -name SimulatorBuild.zip -print -quit)"
+          ditto -x -k "$ZIP" Build/UnpackedSimulator
+          APP="$(find Build/UnpackedSimulator -type d -name BO2IOSCS.app -print -quit)"
+          cp -R "$APP" Build/DerivedData/Build/Products/Debug-iphonesimulator/
           chmod +x Scripts/*.sh
           ./Scripts/run_simulator_test.sh
       - uses: actions/upload-artifact@v4
@@ -80,10 +81,12 @@ jobs:
       - run: brew install xcodegen
       - run: chmod +x Scripts/*.sh Tools/*.sh
       - run: ./Scripts/build_ios.sh device
+      - name: Package device app handoff
+        run: ditto -c -k --sequesterRsrc --keepParent Build/DerivedDataDevice/Build/Products/Release-iphoneos/BO2IOSCS.app Build/DeviceApp.zip
       - uses: actions/upload-artifact@v4
         with:
           name: DeviceApp
-          path: Build/DerivedDataDevice/Build/Products/Release-iphoneos/BO2IOSCS.app
+          path: Build/DeviceApp.zip
 
   ipa-packaging-validation:
     needs: [device-build, simulator-runtime-test]
@@ -96,8 +99,11 @@ jobs:
           name: DeviceApp
           path: downloaded
       - run: |
-          mkdir -p Build/Payload
-          cp -R downloaded/BO2IOSCS.app Build/Payload/
+          mkdir -p Build/Payload Build/UnpackedDevice
+          ZIP="$(find downloaded -name DeviceApp.zip -print -quit)"
+          ditto -x -k "$ZIP" Build/UnpackedDevice
+          APP="$(find Build/UnpackedDevice -type d -name BO2IOSCS.app -print -quit)"
+          cp -R "$APP" Build/Payload/
           (cd Build && zip -qry BO2IOSCS-unsigned.ipa Payload)
           chmod +x Tools/validate_ipa.sh
           ./Tools/validate_ipa.sh Build/BO2IOSCS-unsigned.ipa IPA_VALIDATION_REPORT.md
