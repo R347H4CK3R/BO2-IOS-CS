@@ -1,18 +1,26 @@
 {
-  "current_phase": 4,
-  "completed_phases": [1, 3],
-  "partial_phases": {
-    "2": "Native iOS bootstrap runtime compiles for simulator and ARM64 device, but final open-source engine integration remains incomplete."
-  },
+  "current_phase": 5,
+  "completed_phases": [1, 2, 3, 4],
   "failed_tests": [],
   "known_blockers": [
-    "Final open-source engine runtime integration is not complete.",
-    "Format-specific BO2 PS3 map, texture, mesh, animation, and audio decoding is not complete."
+    "The user-owned PS3 BO2 .ff fastfiles are authenticated/encrypted TAff0100 containers. This project intentionally does not bypass that encryption; payload conversion requires user-provided legally decrypted/normalized fastfile data.",
+    "Format-specific IPAK texture decoding, BO2 mesh/map decoding, skeletal animation decoding, and audio-bank extraction remain to be implemented.",
+    "Physical iPhone installation/runtime validation has not yet been performed.",
+    "The SceneKit runtime is the validated bootstrap runtime; the final open-source-engine/runtime decision remains documented in ENGINE_DECISION.md."
   ],
-  "last_successful_build": "a23088eb150f4516b538671cc9db18772017a55a",
-  "simulator_test_status": "PASS - iPhone 16 Plus AUTOTEST",
-  "device_build_status": "PASS - unsigned ARM64 generic iOS target",
+  "last_successful_build": {
+    "workflow_run": 35485545921,
+    "run_number": 8,
+    "commit": "a23088eb150f4516b538671cc9db18772017a55a"
+  },
+  "simulator_test_status": "PASS - iPhone 16 Plus simulator AUTOTEST",
+  "device_build_status": "PASS - unsigned ARM64 build",
   "ipa_validation_status": "PASS",
   "ipa_path": "Build/BO2IOSCS-unsigned.ipa",
-  "ci_run_id": 35485545921
+  "asset_scanner_status": "PASS - real BO2 fastfile headers identified and encrypted payloads explicitly gated",
+  "next_work": [
+    "Expand GameDataIntermediate schemas and validators.",
+    "Inspect non-encrypted user-provided containers such as IPAK/audio metadata without modifying originals.",
+    "Accept user-provided decrypted fastfile/zone data for real map geometry conversion."
+  ]
 }
