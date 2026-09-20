@@ -8,7 +8,7 @@ command -v xcodegen >/dev/null || { echo "xcodegen is required"; exit 2; }
 xcodegen generate
 case "$MODE" in
   simulator)
-    xcodebuild -project BO2IOSCS.xcodeproj -scheme BO2IOSCS -sdk iphonesimulator -configuration Debug -derivedDataPath Build/DerivedData CODE_SIGNING_ALLOWED=NO build
+    xcodebuild -project BO2IOSCS.xcodeproj -scheme BO2IOSCS -sdk iphonesimulator -configuration Debug -derivedDataPath Build/DerivedData build
     rm -f Build/SimulatorBuild.zip
     ditto -c -k --sequesterRsrc --keepParent Build/DerivedData/Build/Products/Debug-iphonesimulator/BO2IOSCS.app Build/SimulatorBuild.zip
     ;;
