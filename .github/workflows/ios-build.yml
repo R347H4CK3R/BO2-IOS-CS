@@ -1,0 +1,111 @@
+name: iOS Build
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  source-validation:
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Xcode inventory and selection
+        run: |
+          ls -1 /Applications | grep '^Xcode' || true
+          XCODE="$(ls -d /Applications/Xcode*.app | grep -vi beta | sort -V | tail -1)"
+          sudo xcode-select -s "$XCODE/Contents/Developer"
+          xcodebuild -version
+          xcrun simctl list devices available
+          xcrun simctl list runtimes
+      - name: Validate proprietary exclusions
+        run: |
+          ! git ls-files | grep -E '(^|/)(PS3_GAME|GeneratedGameData|LocalGameData|ProprietaryAssets)(/|$)'
+      - run: brew install xcodegen
+      - run: xcodegen generate
+      - run: xcodebuild -resolvePackageDependencies -project BO2IOSCS.xcodeproj -scheme BO2IOSCS
+
+  converter-unit-tests:
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+      - run: python3 -m unittest discover -s Tools/PS3AssetConverter -p 'test_*.py'
+
+  simulator-build:
+    needs: [source-validation, converter-unit-tests]
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+      - run: brew install xcodegen
+      - run: chmod +x Scripts/*.sh Tools/*.sh
+      - run: ./Scripts/build_ios.sh simulator
+      - uses: actions/upload-artifact@v4
+        with:
+          name: SimulatorBuild
+          path: |
+            Build/SimulatorBuild.zip
+            Build/DerivedData/Build/Products/Debug-iphonesimulator/BO2IOSCS.app
+
+  simulator-runtime-test:
+    needs: simulator-build
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: SimulatorBuild
+          path: downloaded
+      - run: |
+          mkdir -p Build/DerivedData/Build/Products/Debug-iphonesimulator
+          cp -R downloaded/BO2IOSCS.app Build/DerivedData/Build/Products/Debug-iphonesimulator/
+          chmod +x Scripts/*.sh
+          ./Scripts/run_simulator_test.sh
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: SimulatorRuntimeResults
+          path: |
+            SIMULATOR_TEST_REPORT.md
+            AUTOTEST_RESULT.json
+            Build/RuntimeLogs/
+
+  device-build:
+    needs: [source-validation, converter-unit-tests]
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+      - run: brew install xcodegen
+      - run: chmod +x Scripts/*.sh Tools/*.sh
+      - run: ./Scripts/build_ios.sh device
+      - uses: actions/upload-artifact@v4
+        with:
+          name: DeviceApp
+          path: Build/DerivedDataDevice/Build/Products/Release-iphoneos/BO2IOSCS.app
+
+  ipa-packaging-validation:
+    needs: [device-build, simulator-runtime-test]
+    if: always() && needs.device-build.result == 'success'
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: DeviceApp
+          path: downloaded
+      - run: |
+          mkdir -p Build/Payload
+          cp -R downloaded/BO2IOSCS.app Build/Payload/
+          (cd Build && zip -qry BO2IOSCS-unsigned.ipa Payload)
+          chmod +x Tools/validate_ipa.sh
+          ./Tools/validate_ipa.sh Build/BO2IOSCS-unsigned.ipa IPA_VALIDATION_REPORT.md
+      - uses: actions/upload-artifact@v4
+        with:
+          name: BO2IOSCS-unsigned-IPA
+          path: |
+            Build/BO2IOSCS-unsigned.ipa
+            IPA_VALIDATION_REPORT.md
+            PROJECT_PROGRESS.json
+            BUILD_NOTES.md
