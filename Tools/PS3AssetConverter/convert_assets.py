@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 import argparse, hashlib, json, struct
 from pathlib import Path
+from fastfile import parse_fastfile_header
 
 SIGNATURES = {
     b"\x89PNG": ("png", "texture"),
@@ -16,6 +17,7 @@ def detect(path: Path):
         if head.startswith(sig):
             return result
     ext = path.suffix.lower()
+    if ext == ".ff": return "bo2_fastfile", "container"
     if ext in {".bsp", ".map"}: return ext[1:], "map"
     if ext in {".wav", ".mp3", ".at3", ".at9"}: return ext[1:], "audio"
     if ext in {".png", ".dds", ".tga", ".jpg", ".jpeg"}: return ext[1:], "texture"
@@ -36,7 +38,7 @@ def scan(source: Path, output: Path):
             continue
         try:
             fmt, cls = detect(p)
-            rows.append({
+            row = {
                 "original_path": str(p.relative_to(source)),
                 "file_size": p.stat().st_size,
                 "detected_format": fmt,
@@ -49,7 +51,22 @@ def scan(source: Path, output: Path):
                 "sha256_prefix": hashlib.sha256(p.read_bytes()).hexdigest()[:16],
                 "warnings": [] if fmt != "unknown" else ["Unknown format preserved for diagnostics"],
                 "errors": []
-            })
+            }
+            if fmt == "bo2_fastfile":
+                try:
+                    header = parse_fastfile_header(p)
+                    row["fastfile_header"] = header.to_dict()
+                    row["endianness"] = "big"
+                    row["compression"] = "encrypted/compressed payload"
+                    row["conversion_status"] = "encrypted_requires_decrypted_input"
+                    row["warnings"] = [
+                        "Authenticated BO2 PS3 fastfile detected.",
+                        "Encrypted payload is not decrypted by this project; provide a legally obtained decrypted/normalized source for payload conversion."
+                    ]
+                except Exception as exc:
+                    row["conversion_status"] = "header_parse_error"
+                    row["errors"].append(str(exc))
+            rows.append(row)
         except Exception as exc:
             rows.append({"original_path": str(p), "conversion_status": "error", "errors": [str(exc)]})
     inventory = {"source": str(source), "files": rows, "counts": {"total": len(rows)}}
