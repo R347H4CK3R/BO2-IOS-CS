@@ -4,7 +4,8 @@ import SceneKit
 final class GameViewController: UIViewController, SCNSceneRendererDelegate {
     private let sceneView = SCNView()
     private let scene = SCNScene()
-    private let sim = MatchSimulation(botCount: 4)
+    private var sim = MatchSimulation(botCount: 4)
+    private var weaponState: PlayerWeaponState?
     private var lastTime: TimeInterval = 0
     private var botNodes: [SCNNode] = []
     private var frameCount = 0
@@ -48,6 +49,8 @@ final class GameViewController: UIViewController, SCNSceneRendererDelegate {
             let weapons = try GameDataLoader.loadWeapons()
             loadedMapName = map.name
             loadedWeaponCount = weapons.count
+            if let first = weapons.first { weaponState = PlayerWeaponState(definition: first) }
+            sim = MatchSimulation(botCount: 4, objective: map.objective)
             for box in map.boxes {
                 let node = SCNNode(geometry: SCNBox(width: CGFloat(box.sx * map.worldScale),
                                                    height: CGFloat(box.sy * map.worldScale),
@@ -102,6 +105,23 @@ final class GameViewController: UIViewController, SCNSceneRendererDelegate {
     private func setupHUD() {
         let hud = TouchHUD(frame: view.bounds)
         hud.autoresizingMask = [.flexibleWidth, .flexibleHeight]
+        hud.onAction = { [weak self] action in
+            guard let self else { return }
+            switch action {
+            case "FIRE":
+                _ = self.weaponState?.fire()
+            case "RELOAD":
+                _ = self.weaponState?.beginReload()
+            case "USE":
+                if self.sim.objectiveState == .planted {
+                    self.sim.beginDefuse()
+                } else if self.sim.objectiveState == .idle {
+                    self.sim.beginPlant()
+                }
+            default:
+                break
+            }
+        }
         view.addSubview(hud)
     }
 
@@ -109,6 +129,7 @@ final class GameViewController: UIViewController, SCNSceneRendererDelegate {
         let dt = lastTime == 0 ? 1.0/60.0 : min(0.05, time - lastTime)
         lastTime = time
         sim.tick(dt: dt)
+        weaponState?.tick(dt: dt)
         frameCount += 1
         for (i, node) in botNodes.enumerated() {
             let phase = Float(time * 0.8 + Double(i))
@@ -118,8 +139,9 @@ final class GameViewController: UIViewController, SCNSceneRendererDelegate {
         if autotest && !finished && Date().timeIntervalSince(started) >= 10 {
             finished = true
             let duration = Date().timeIntervalSince(started)
+            let gameDataReady = loadedMapName != "none" && loadedWeaponCount > 0 && weaponState != nil
             let result: [String: Any] = [
-                "status": "PASS",
+                "status": gameDataReady ? "PASS" : "FAIL",
                 "duration_seconds": duration,
                 "frames": frameCount,
                 "average_fps": Double(frameCount) / max(duration, 0.001),
@@ -132,10 +154,13 @@ final class GameViewController: UIViewController, SCNSceneRendererDelegate {
                 "normalized_map_loaded": loadedMapName != "none",
                 "loaded_map": loadedMapName,
                 "weapon_definitions_loaded": loadedWeaponCount,
+                "weapon_runtime_ready": weaponState != nil,
+                "magazine_ammo": weaponState?.magazine ?? -1,
+                "reserve_ammo": weaponState?.reserve ?? -1,
                 "performance_scope": "simulator-only"
             ]
             RuntimeLog.writeJSON(result, name: "AUTOTEST_RESULT.json")
-            RuntimeLog.stage("AUTOTEST_PASS")
+            RuntimeLog.stage(gameDataReady ? "AUTOTEST_PASS" : "AUTOTEST_FAIL")
         }
     }
 
