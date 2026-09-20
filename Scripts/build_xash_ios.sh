@@ -39,7 +39,7 @@ build_sdl_framework() {
     IPHONEOS_DEPLOYMENT_TARGET=17.0 \
     CONFIGURATION_BUILD_DIR="$out" \
     CODE_SIGNING_ALLOWED=NO \
-    build
+    build >&2
 
   local framework="$out/SDL2.framework"
   [ -d "$framework" ] || {
