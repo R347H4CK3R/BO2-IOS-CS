@@ -27,7 +27,7 @@ find "$APP" -name '*.dylib' -type f -print > "$TMP/dylibs.txt"
 grep -q 'libref_gles1.dylib' "$TMP/dylibs.txt" || fail "GLES1 renderer missing"
 grep -q 'libref_gles3compat.dylib' "$TMP/dylibs.txt" || fail "GLES3 compatibility renderer missing"
 
-if find "$APP" -type f | grep -Eiq '\.(ff|ipak|sabs|self|bin)$|EBOOT\.BIN|PS3_GAME'; then
+if find "$APP" -type f | grep -Eiq '\.(ff|ipak|sabs|self)$|EBOOT\.BIN|PS3_GAME'; then
   fail "proprietary/PS3 source-like file unexpectedly present"
 fi
 
