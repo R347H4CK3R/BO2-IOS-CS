@@ -11,7 +11,6 @@ struct WeaponDefinition: Codable {
     let spread: Double
 }
 
-
 final class PlayerWeaponState {
     let definition: WeaponDefinition
     private(set) var magazine: Int
@@ -51,7 +50,6 @@ final class PlayerWeaponState {
         isReloading = false
     }
 }
-
 
 struct ReadableAssetRecord: Codable {
     let originalPath: String
@@ -204,6 +202,14 @@ final class MatchSimulation {
         }
     }
 
+    func isWithinObjective(x: Double, y: Double, z: Double) -> Bool {
+        guard let objective else { return false }
+        let dx = x - objective.x
+        let dy = y - objective.y
+        let dz = z - objective.z
+        return dx * dx + dy * dy + dz * dz <= objective.radius * objective.radius
+    }
+
     @discardableResult
     func fire(weapon: WeaponDefinition, from shooterID: Int, at targetID: Int) -> Bool {
         guard shooterID != targetID,
@@ -273,16 +279,30 @@ final class MatchSimulation {
         }
     }
 
-    func beginPlant() {
-        guard objective != nil, objectiveState == .idle else { return }
+    @discardableResult
+    func beginPlant(x: Double, y: Double, z: Double) -> Bool {
+        guard objectiveState == .idle, isWithinObjective(x: x, y: y, z: z) else { return false }
         objectiveState = .planting
         objectiveElapsed = 0
+        return true
+    }
+
+    @discardableResult
+    func beginDefuse(x: Double, y: Double, z: Double) -> Bool {
+        guard objectiveState == .planted, isWithinObjective(x: x, y: y, z: z) else { return false }
+        objectiveState = .defusing
+        objectiveElapsed = 0
+        return true
+    }
+
+    func beginPlant() {
+        guard let objective else { return }
+        _ = beginPlant(x: objective.x, y: objective.y, z: objective.z)
     }
 
     func beginDefuse() {
-        guard objective != nil, objectiveState == .planted else { return }
-        objectiveState = .defusing
-        objectiveElapsed = 0
+        guard let objective else { return }
+        _ = beginDefuse(x: objective.x, y: objective.y, z: objective.z)
     }
 
     func tick(dt: TimeInterval) {
