@@ -200,8 +200,17 @@ final class GameViewController: UIViewController, SCNSceneRendererDelegate {
             let gameDataReady = loadedMapName != "none" && loadedWeaponCount > 0 && loadedReadableAssetCount > 0 && weaponState != nil && playerCamera != nil
             // Exercise the player combat path deterministically during CI, independent
             // of touch injection reliability on hosted simulators.
-            if sim.playerShotsFired == 0, let weapon = weaponState?.definition {
-                for _ in 0..<4 { _ = sim.playerFire(weapon: weapon, at: 1) }
+            if sim.playerShotsFired == 0, let weapon = weaponState?.definition,
+               let targetID = sim.bots.firstIndex(where: { $0.alive }) {
+                let eliminationsBefore = sim.playerEliminations
+                var attempts = 0
+                while sim.bots.indices.contains(targetID),
+                      sim.bots[targetID].alive,
+                      sim.playerEliminations == eliminationsBefore,
+                      attempts < 8 {
+                    _ = sim.playerFire(weapon: weapon, at: targetID)
+                    attempts += 1
+                }
                 syncBotNodes()
             }
             let playerCombatReady = sim.playerCombatIntegrated && sim.playerEliminations > 0
