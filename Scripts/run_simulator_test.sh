@@ -43,13 +43,15 @@ if ! xcrun simctl install "$UDID" "$APP" > Build/RuntimeLogs/install.log 2>&1; t
   xcrun simctl shutdown "$UDID" >/dev/null 2>&1 || true
   exit 1
 fi
-DATA="$(xcrun simctl get_app_container "$UDID" "$BUNDLE" data 2>/dev/null || true)"
-# Hosted runners can leave simctl launch itself blocked while the application is
-# healthy. Keep that client alive while the in-app autotest runs; an installed
-# data container alone is not evidence that launch has completed.
+# Hosted runners can take several seconds after install before the data
+# container becomes queryable. Resolve it during polling instead of only once.
+DATA=""
 SIMCTL_CHILD_AUTOTEST=1 xcrun simctl launch --terminate-running-process "$UDID" "$BUNDLE" --autotest > Build/RuntimeLogs/launch.log 2>&1 &
 LAUNCH_PID=$!
-for _ in $(seq 1 45); do
+for _ in $(seq 1 90); do
+  if [ -z "$DATA" ]; then
+    DATA="$(xcrun simctl get_app_container "$UDID" "$BUNDLE" data 2>/dev/null || true)"
+  fi
   if [ -n "$DATA" ] && [ -f "$DATA/Documents/Logs/AUTOTEST_RESULT.json" ]; then
     break
   fi
@@ -59,8 +61,12 @@ for _ in $(seq 1 45); do
     wait "$LAUNCH_PID" 2>/dev/null
     LAUNCH_RC=$?
     if [ "$LAUNCH_RC" -ne 0 ]; then
+      # A transient launch-service failure is common immediately after install.
+      # Retry once after the simulator settles, then keep polling for the
+      # in-app result instead of failing solely on the simctl client.
       sleep 3
-      break
+      SIMCTL_CHILD_AUTOTEST=1 xcrun simctl launch --terminate-running-process "$UDID" "$BUNDLE" --autotest >> Build/RuntimeLogs/launch.log 2>&1 &
+      LAUNCH_PID=$!
     fi
   fi
   sleep 1
