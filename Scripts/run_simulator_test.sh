@@ -75,7 +75,7 @@ STATUS=FAIL
 if [ -n "$DATA" ] && [ -f "$DATA/Documents/Logs/AUTOTEST_RESULT.json" ]; then
   cp "$DATA/Documents/Logs/AUTOTEST_RESULT.json" "$RESULT"
   cp "$DATA/Documents/Logs/runtime.log" Build/RuntimeLogs/runtime.log 2>/dev/null || true
-  STATUS="$(python3 -c 'import json; print(json.load(open("AUTOTEST_RESULT.json")).get("status","FAIL"))')"
+  STATUS="$(python3 -c 'import json; d=json.load(open("AUTOTEST_RESULT.json")); ok=d.get("status")=="PASS" and d.get("player_combat_integrated") is True and d.get("player_eliminations",0)>0; print("PASS" if ok else "FAIL")')"
 else
   echo '{"status":"FAIL","reason":"AUTOTEST_RESULT.json missing"}' > "$RESULT"
 fi
