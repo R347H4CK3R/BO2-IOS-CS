@@ -198,8 +198,15 @@ final class GameViewController: UIViewController, SCNSceneRendererDelegate {
             finished = true
             let duration = Date().timeIntervalSince(started)
             let gameDataReady = loadedMapName != "none" && loadedWeaponCount > 0 && loadedReadableAssetCount > 0 && weaponState != nil && playerCamera != nil
+            // Exercise the player combat path deterministically during CI, independent
+            // of touch injection reliability on hosted simulators.
+            if sim.playerShotsFired == 0, let weapon = weaponState?.definition {
+                for _ in 0..<4 { _ = sim.playerFire(weapon: weapon, at: 1) }
+                syncBotNodes()
+            }
+            let playerCombatReady = sim.playerCombatIntegrated && sim.playerEliminations > 0
             let result: [String: Any] = [
-                "status": gameDataReady ? "PASS" : "FAIL",
+                "status": (gameDataReady && playerCombatReady) ? "PASS" : "FAIL",
                 "duration_seconds": duration,
                 "frames": frameCount,
                 "average_fps": Double(frameCount) / max(duration, 0.001),
@@ -228,7 +235,7 @@ final class GameViewController: UIViewController, SCNSceneRendererDelegate {
                 "performance_scope": "simulator-only"
             ]
             RuntimeLog.writeJSON(result, name: "AUTOTEST_RESULT.json")
-            RuntimeLog.stage(gameDataReady ? "AUTOTEST_PASS" : "AUTOTEST_FAIL")
+            RuntimeLog.stage((gameDataReady && playerCombatReady) ? "AUTOTEST_PASS" : "AUTOTEST_FAIL")
         }
     }
 
