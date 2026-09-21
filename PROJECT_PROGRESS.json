@@ -1,11 +1,6 @@
 {
   "current_phase": 5,
-  "completed_phases": [
-    1,
-    2,
-    3,
-    4
-  ],
+  "completed_phases": [1, 2, 3, 4],
   "failed_tests": [],
   "known_blockers": [
     "The user-owned PS3 BO2 .ff fastfiles are authenticated/encrypted TAff0100 containers. This project intentionally does not bypass that encryption; payload conversion requires user-provided legally decrypted/normalized fastfile data.",
@@ -13,21 +8,21 @@
     "PS3 tiled layouts and swizzle variants other than explicitly-authoritative Morton2D remain unsupported; the converter intentionally does not infer layout metadata or padding."
   ],
   "last_successful_build": {
-    "workflow_run": "35560015192",
-    "run_number": 105,
-    "commit": "0c20693ad0e3e2704c7f7726e2abba1788b29022"
+    "workflow_run": "35569014791",
+    "run_number": 108,
+    "commit": "7034b76d590c153ccd8b586d2e2c84e0ab3e8b03"
   },
-  "simulator_test_status": "PASS - normalized GameData map/weapon loading, touch movement/aim, ammo/reload runtime state, objective flow, deterministic bot combat, and the readable-asset converter batch are CI validated; app simulator autotest and pinned Xash3D FWGS simulator startup test pass",
-  "device_build_status": "PASS - unsigned ARM64 app build and pinned Xash3D FWGS ARM64 device engine build",
-  "ipa_validation_status": "PASS - run #88 validates the integrated Xash runtime IPA and Swift runtime IPA packaging; proprietary PS3 source-like files remain excluded",
+  "simulator_test_status": "PASS - run #108 attempt 2 restored the fully-green simulator runtime baseline; normalized GameData, touch movement/aim, ammo/reload, objective flow, deterministic bot combat, readable-asset conversion, and player combat remain validated.",
+  "device_build_status": "PASS - unsigned ARM64 app build and pinned Xash3D FWGS ARM64 device engine build validated in run #108.",
+  "ipa_validation_status": "PASS - run #108 validates unsigned IPA packaging while proprietary PS3 source-like files remain excluded.",
   "ipa_path": "Build/BO2IOSCS-unsigned.ipa",
-  "xash_runtime_status": "PASS - run #91 validates Xash3D FWGS startup and execution of generated runtime metadata derived from safe normalized GameData; player combat integration is now queued for CI validation.",
-  "asset_scanner_status": "PASS - BO2 fastfile headers and PS3 IPAK containers recognized; encrypted fastfile payloads remain intentionally unsupported; IPAK LZO payload extraction with CRC validation; authoritative texture metadata mapping; strict runtime texture generation; explicit metadata-gated Morton2D PS3 swizzle conversion; authoritative IPAK-to-runtime-texture generation validated in run #80; structurally readable asset import with path preservation and SHA-256 provenance validated in run #85 while encrypted .ff inputs remain excluded",
+  "xash_runtime_status": "PASS - run #108 validates the restored Xash3D FWGS simulator/runtime baseline.",
+  "asset_scanner_status": "PASS - BO2 fastfile headers and PS3 IPAK containers recognized; encrypted fastfile payloads remain intentionally unsupported; authoritative metadata and structurally readable asset paths remain the supported conversion route.",
   "next_work": [
-    "Integrate player spawn and objective proximity/use gating from normalized map metadata and validate complete round transitions in simulator CI.",
+    "Reintroduce player spawn and objective proximity/use gating from normalized map metadata using small reviewable edits, then validate complete round transitions in simulator CI.",
     "Consolidate the final unsigned ARM64 IPA after the next fully-green gameplay/runtime batch.",
     "Only accept legally decrypted/normalized fastfile zone data or structurally readable assets; never bypass encryption.",
     "Perform physical iPhone installation/runtime validation once the IPA is available to the user."
   ],
-  "simulator_status": "PASS - run #105 validates normalized map-driven bot spawn positions and round-reset spawn restoration in addition to prior GameData, touch, weapon, objective, bot combat, and player combat validation."
+  "simulator_status": "PASS - run #108 attempt 2 is the restored fully-green gameplay/runtime baseline after the malformed Swift rewrite was removed."
 }
