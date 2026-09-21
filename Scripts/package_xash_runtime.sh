@@ -47,6 +47,27 @@ if [ -d "$ROOT/GeneratedGameData" ]; then
   cp -R "$ROOT/GeneratedGameData/." "$APP/bo2ioscs/GameData/"
 fi
 
+# Generate a project-owned Xash startup config from normalized safe metadata so CI
+# can prove the engine consumes GameData rather than merely carrying it in the bundle.
+python3 - "$APP/bo2ioscs/GameData/validation_map.json"           "$APP/bo2ioscs/GameData/TestData/readable_asset_manifest.json"           "$APP/bo2ioscs/autoexec.cfg" <<'PY'
+import json, sys
+from pathlib import Path
+
+map_path, manifest_path, out_path = map(Path, sys.argv[1:])
+m = json.loads(map_path.read_text())
+manifest = json.loads(manifest_path.read_text())
+name = str(m.get("name", "unknown")).replace('"', "")
+records = manifest.get("records", [])
+safe_records = [r for r in records if not str(r.get("original_path", "")).lower().endswith(".ff")]
+if len(safe_records) != len(records):
+    raise SystemExit("unsafe fastfile record present in readable asset manifest")
+Path(out_path).write_text(
+    'echo "BO2IOSCS_GAMEDATA_CONFIG_LOADED"\n'
+    f'set bo2ioscs_map_name "{name}"\n'
+    f'set bo2ioscs_readable_asset_count "{len(safe_records)}"\n'
+)
+PY
+
 cat > "$APP/Info.plist" <<'PLIST'
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
@@ -107,6 +128,7 @@ if [ "$MODE" = "device" ]; then
   zipinfo -1 "$IPA" > "$OUT/IPA_CONTENTS.txt"
   grep -qx 'Payload/BO2IOSCS.app/xash' "$OUT/IPA_CONTENTS.txt"
   grep -qx 'Payload/BO2IOSCS.app/bo2ioscs/gameinfo.txt' "$OUT/IPA_CONTENTS.txt"
+  grep -qx 'Payload/BO2IOSCS.app/bo2ioscs/autoexec.cfg' "$OUT/IPA_CONTENTS.txt"
   grep -qx 'Payload/BO2IOSCS.app/bo2ioscs/GameData/validation_map.json' "$OUT/IPA_CONTENTS.txt"
   grep -qx 'Payload/BO2IOSCS.app/bo2ioscs/GameData/TestData/readable_asset_manifest.json' "$OUT/IPA_CONTENTS.txt"
   grep -qx 'Payload/BO2IOSCS.app/SDL2.framework/SDL2' "$OUT/IPA_CONTENTS.txt"
@@ -122,6 +144,7 @@ if [ "$MODE" = "device" ]; then
 - proprietary assets included: no
 - signing: ad-hoc (intended for later sideload/re-sign workflow)
 - gameplay content: project GameData and the safe readable-asset manifest are integrated into the Xash app bundle
+- runtime config: autoexec.cfg is generated from normalized map/manifest metadata and executed by Xash at startup
 - converted BO2 content: included only when legally generated/decrypted or structurally readable inputs are supplied
 REPORT
 

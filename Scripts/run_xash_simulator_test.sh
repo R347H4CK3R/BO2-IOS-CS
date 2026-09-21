@@ -42,6 +42,10 @@ xcrun simctl bootstatus "$UDID" -b
   echo "Readable asset manifest missing from Xash simulator app" >&2
   exit 4
 }
+[ -f "$APP/bo2ioscs/autoexec.cfg" ] || {
+  echo "Generated Xash runtime config missing" >&2
+  exit 5
+}
 xcrun simctl install "$UDID" "$APP" > "$LOGDIR/install.log" 2>&1
 
 (
@@ -70,15 +74,19 @@ xcrun simctl spawn "$UDID" log show --last 3m --style compact \
 
 AUTOTEST_MARKER=0
 ENGINE_MARKER=0
+GAMEDATA_CONFIG_MARKER=0
 if grep -q 'BO2IOSCS_AUTOTEST launch path enabled' "$LOGDIR/xash.log" "$LOGDIR/xash-live.log" 2>/dev/null; then
   AUTOTEST_MARKER=1
 fi
 if grep -Eiq 'Xash3D|Xash:|Host_Init|filesystem|gameinfo|bo2ioscs' "$LOGDIR/xash.log" "$LOGDIR/xash-live.log" 2>/dev/null; then
   ENGINE_MARKER=1
 fi
+if grep -q 'BO2IOSCS_GAMEDATA_CONFIG_LOADED' "$LOGDIR/xash.log" "$LOGDIR/xash-live.log" 2>/dev/null; then
+  GAMEDATA_CONFIG_MARKER=1
+fi
 
 STATUS=FAIL
-if [ "$AUTOTEST_MARKER" -eq 1 ] && [ "$ENGINE_MARKER" -eq 1 ]; then
+if [ "$AUTOTEST_MARKER" -eq 1 ] && [ "$ENGINE_MARKER" -eq 1 ] && [ "$GAMEDATA_CONFIG_MARKER" -eq 1 ]; then
   STATUS=PASS
 fi
 
@@ -90,10 +98,11 @@ cat > "$REPORT" <<EOF
 - simulator UDID: $UDID
 - noninteractive iOS launch marker: $AUTOTEST_MARKER
 - engine/filesystem marker: $ENGINE_MARKER
+- GameData runtime-config marker: $GAMEDATA_CONFIG_MARKER
 - screenshot: $LOGDIR/xash-simulator.png
 - logs: $LOGDIR/xash.log
 - packaged readable asset manifest: present
-- scope: verifies native Xash iOS startup plus safe GameData/manifest packaging; full converted BO2 gameplay is not present yet
+- scope: verifies native Xash iOS startup and execution of a generated config derived from safe normalized GameData; full converted BO2 gameplay is not present yet
 EOF
 
 echo "$STATUS"

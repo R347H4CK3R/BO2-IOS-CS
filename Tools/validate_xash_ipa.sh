@@ -19,6 +19,8 @@ fail() {
 [ -f "$APP/Info.plist" ] || fail "Info.plist missing"
 [ -f "$APP/SDL2.framework/SDL2" ] || fail "SDL2.framework missing"
 [ -f "$APP/bo2ioscs/gameinfo.txt" ] || fail "gameinfo missing"
+[ -f "$APP/bo2ioscs/autoexec.cfg" ] || fail "generated runtime config missing"
+grep -q 'BO2IOSCS_GAMEDATA_CONFIG_LOADED' "$APP/bo2ioscs/autoexec.cfg" || fail "runtime config marker missing"
 [ -f "$APP/bo2ioscs/GameData/validation_map.json" ] || fail "normalized map missing"
 [ -f "$APP/bo2ioscs/GameData/TestData/readable_asset_manifest.json" ] || fail "readable asset manifest missing"
 
@@ -55,6 +57,7 @@ cat > "$REPORT" <<EOF
 - bundled dylibs: $DYLIB_COUNT
 - SDL2 framework: present
 - gameinfo: present
+- generated GameData runtime config: present
 - normalized GameData map: present
 - readable asset manifest: present
 - proprietary PS3 source-like files: absent
