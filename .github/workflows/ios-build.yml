@@ -28,7 +28,13 @@ jobs:
           xcrun simctl list runtimes
       - name: Validate proprietary exclusions
         run: |
-          ! git ls-files | grep -E '(^|/)(PS3_GAME|GeneratedGameData|LocalGameData|ProprietaryAssets)(/|$)'
+          # GeneratedGameData is a committed resource scaffold only; generated/user-owned
+          # asset payloads remain ignored. Reject known proprietary source trees and any
+          # tracked GeneratedGameData content other than its documentation scaffold.
+          ! git ls-files | grep -E '(^|/)(PS3_GAME|LocalGameData|ProprietaryAssets)(/|$)'
+          BAD_GENERATED="$(git ls-files 'GeneratedGameData/**' | grep -v '^GeneratedGameData/README.md$' || true)"
+          test -z "$BAD_GENERATED"
+          ! git ls-files | grep -Ei '(^|/)(EBOOT\.BIN|.*\.(ff|self|ipak|sabs))$'
       - run: brew install xcodegen
       - run: xcodegen generate
       - run: xcodebuild -resolvePackageDependencies -project BO2IOSCS.xcodeproj -scheme BO2IOSCS
@@ -164,8 +170,6 @@ jobs:
           ditto -x -k "$ZIP" Build/UnpackedSimulator
           APP="$(find Build/UnpackedSimulator -type d -name BO2IOSCS.app -print -quit)"
           test -n "$APP"
-          # The uploaded archive may already contain BO2IOSCS.app at the expected
-          # destination. Avoid cp's self-copy failure on macOS runners.
           DEST="Build/DerivedData/Build/Products/Debug-iphonesimulator/BO2IOSCS.app"
           if [ "$(cd "$(dirname "$APP")" && pwd)/$(basename "$APP")" != "$(cd "$(dirname "$DEST")" && pwd)/$(basename "$DEST")" ]; then
             rm -rf "$DEST"
