@@ -134,6 +134,7 @@ final class MatchSimulation {
     private(set) var objectiveState: ObjectiveState = .idle
     private(set) var eliminations = 0
     private(set) var objectiveElapsed: TimeInterval = 0
+    private var botCombatAccumulator: TimeInterval = 0
     let bots: [BotState]
     let objective: RuntimeObjective?
 
@@ -177,6 +178,20 @@ final class MatchSimulation {
         objectiveElapsed = 0
         objectiveState = .idle
         for bot in bots { bot.health = 100 }
+    }
+
+    func botCombatTick(dt: TimeInterval, weapon: WeaponDefinition) {
+        guard !bots.isEmpty else { return }
+        botCombatAccumulator += dt
+        let interval = max(0.1, 1.0 / max(weapon.fireRate, 0.1))
+        while botCombatAccumulator >= interval {
+            botCombatAccumulator -= interval
+            let aliveShooters = bots.filter { $0.alive }
+            for shooter in aliveShooters {
+                guard let target = bots.first(where: { $0.alive && $0.team != shooter.team }) else { return }
+                _ = fire(weapon: weapon, from: shooter.id, at: target.id)
+            }
+        }
     }
 
     func beginPlant() {
