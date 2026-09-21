@@ -3,6 +3,7 @@ import argparse, hashlib, json, re, struct
 from pathlib import Path
 from fastfile import parse_fastfile_header
 from ipak import DATA_HASH_MASK, IPakFile
+from runtime_texture import write_runtime_texture
 
 SIGNATURES = {
     b"\x89PNG": ("png", "texture"), b"DDS ": ("dds", "texture"),
@@ -84,14 +85,18 @@ def scan(source: Path, output: Path):
     (intermediate / "schema.json").write_text(json.dumps({"types": ["Mesh","Material","Texture","Skeleton","Animation","Audio","Map","Entity","CollisionMesh","SpawnPoint","WeaponAsset"]}, indent=2))
     return inventory
 
-def extract_ipak_payloads(source: Path, output: Path, texture_metadata=None):
+def extract_ipak_payloads(source: Path, output: Path, texture_metadata=None, generate_runtime=False):
     texture_root = output / "GameDataIntermediate" / "TexturePayloads"; texture_root.mkdir(parents=True, exist_ok=True)
+    runtime_root = output / "GameDataIntermediate" / "RuntimeTextures"
+    if generate_runtime: runtime_root.mkdir(parents=True, exist_ok=True)
     records = []; metadata = texture_metadata or {}
     for ipak_path in sorted(source.rglob("*.ipak")):
         try: ipak = IPakFile(ipak_path)
         except Exception as exc:
             records.append({"source": str(ipak_path.relative_to(source)), "status": "container_error", "error": str(exc)}); continue
         package_dir = texture_root / ipak_path.stem; package_dir.mkdir(parents=True, exist_ok=True)
+        runtime_package_dir = runtime_root / ipak_path.stem
+        if generate_runtime: runtime_package_dir.mkdir(parents=True, exist_ok=True)
         for index, entry in enumerate(ipak.entries):
             crc = entry.data_hash & DATA_HASH_MASK
             output_name = f"{index:06d}_{entry.name_hash:08x}_{crc:08x}.bin"; output_path = package_dir / output_name
@@ -102,7 +107,14 @@ def extract_ipak_payloads(source: Path, output: Path, texture_metadata=None):
                           "data_crc": f"0x{crc:08X}", "stored_region_size": entry.size, "decoded_size": len(payload),
                           "status": "decoded_payload_metadata_mapped" if meta else "decoded_payload_metadata_required",
                           "generated_output_path": str(output_path.relative_to(output))}
-                if meta: record["texture_metadata"] = meta
+                if meta:
+                    record["texture_metadata"] = meta
+                    if generate_runtime:
+                        runtime_base = runtime_package_dir / f"{index:06d}_{entry.name_hash:08x}_{crc:08x}"
+                        runtime = write_runtime_texture(payload, meta, runtime_base)
+                        if "path" in runtime:
+                            runtime["path"] = str(Path(runtime["path"]).relative_to(output))
+                        record["runtime_texture"] = runtime
                 records.append(record)
             except Exception as exc:
                 records.append({"source": str(ipak_path.relative_to(source)), "entry_index": index, "name_hash": f"0x{entry.name_hash:08X}", "data_crc": f"0x{crc:08X}", "stored_region_size": entry.size, "status": "decode_error", "error": str(exc)})
@@ -114,12 +126,16 @@ def main():
     parser = argparse.ArgumentParser(); parser.add_argument("--source", required=True); parser.add_argument("--output", required=True)
     parser.add_argument("--extract-ipak", action="store_true", help="Decode IPAK image payloads into GameDataIntermediate/TexturePayloads")
     parser.add_argument("--texture-metadata", help="Authoritative bo2ioscs-texture-metadata-v1 JSON; used only to map decoded payloads, never to infer missing values")
+    parser.add_argument("--generate-runtime-textures", action="store_true", help="Generate validated DDS/TGA runtime textures only for decoded IPAK payloads with authoritative metadata")
     args = parser.parse_args(); source, output = Path(args.source).expanduser().resolve(), Path(args.output).expanduser().resolve()
     if not source.is_dir(): raise SystemExit(f"source directory not found: {source}")
+    if args.generate_runtime_textures and not args.extract_ipak: raise SystemExit("--generate-runtime-textures requires --extract-ipak")
+    if args.generate_runtime_textures and not args.texture_metadata: raise SystemExit("--generate-runtime-textures requires --texture-metadata; metadata is never inferred")
     metadata = load_texture_metadata(Path(args.texture_metadata).expanduser().resolve()) if args.texture_metadata else None
     inventory = scan(source, output); result = {"status": "ok", "files": inventory["counts"]["total"]}
     if args.extract_ipak:
-        records = extract_ipak_payloads(source, output, metadata); result["ipak_payload_records"] = len(records); result["texture_metadata_matches"] = sum("texture_metadata" in r for r in records)
+        records = extract_ipak_payloads(source, output, metadata, args.generate_runtime_textures); result["ipak_payload_records"] = len(records); result["texture_metadata_matches"] = sum("texture_metadata" in r for r in records)
+        result["runtime_textures_generated"] = sum(r.get("runtime_texture", {}).get("status") == "runtime_texture_generated" for r in records)
     print(json.dumps(result))
 
 if __name__ == "__main__": main()
