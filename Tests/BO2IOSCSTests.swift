@@ -69,6 +69,13 @@ final class BO2IOSCSTests: XCTestCase {
         XCTAssertGreaterThanOrEqual(sim.round, 2)
     }
 
+    func testReadableAssetManifestRejectsFastfileRecords() throws {
+        let safe = #"{"schema":"bo2ioscs-readable-asset-manifest-v1","policy":"structurally readable inputs only; no BO2 fastfile decryption","records":[{"original_path":"audio/test.wav","generated_output_path":"GeneratedGameData/ImportedAssets/audio/test.wav","detected_format":"riff","asset_class":"audio","size":16,"sha256":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","status":"imported_readable_asset"}]}"#
+        let manifest = try JSONDecoder().decode(ReadableAssetManifest.self, from: Data(safe.utf8))
+        XCTAssertEqual(manifest.records.count, 1)
+        XCTAssertFalse(manifest.records[0].originalPath.hasSuffix(".ff"))
+    }
+
     func testPlantAndDetonationScoresAttack() {
         let objective = RuntimeObjective(type: "plant_defuse", x: 0, y: 0, z: 0,
                                          radius: 2.5, plantDuration: 1, fuseDuration: 2,

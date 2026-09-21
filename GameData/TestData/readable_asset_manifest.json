@@ -1,0 +1,15 @@
+{
+  "schema": "bo2ioscs-readable-asset-manifest-v1",
+  "policy": "project-owned synthetic CI fixture; structurally readable inputs only; no BO2 fastfile decryption",
+  "records": [
+    {
+      "original_path": "synthetic/runtime_fixture.txt",
+      "generated_output_path": "GeneratedGameData/ImportedAssets/synthetic/runtime_fixture.txt",
+      "detected_format": "txt",
+      "asset_class": "script",
+      "size": 27,
+      "sha256": "6d5fc9ea20b6f9fa3b846986f0fcb9b5f50fd5cfe8e93a73db0a29b27ad6b81f",
+      "status": "imported_readable_asset"
+    }
+  ]
+}

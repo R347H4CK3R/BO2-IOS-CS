@@ -52,6 +52,31 @@ final class PlayerWeaponState {
     }
 }
 
+
+struct ReadableAssetRecord: Codable {
+    let originalPath: String
+    let generatedOutputPath: String
+    let detectedFormat: String
+    let assetClass: String
+    let size: Int
+    let sha256: String
+    let status: String
+
+    enum CodingKeys: String, CodingKey {
+        case originalPath = "original_path"
+        case generatedOutputPath = "generated_output_path"
+        case detectedFormat = "detected_format"
+        case assetClass = "asset_class"
+        case size, sha256, status
+    }
+}
+
+struct ReadableAssetManifest: Codable {
+    let schema: String
+    let policy: String
+    let records: [ReadableAssetRecord]
+}
+
 struct RuntimeSpawnPoint: Codable {
     let team: Team
     let x: Double
@@ -100,6 +125,21 @@ enum GameDataLoader {
                           userInfo: [NSLocalizedDescriptionKey: "unsupported or incomplete normalized map"])
         }
         return map
+    }
+
+    static func loadReadableAssetManifest(bundle: Bundle = .main) throws -> ReadableAssetManifest {
+        guard let url = bundle.url(forResource: "readable_asset_manifest", withExtension: "json") else {
+            throw NSError(domain: "BO2IOSCS.GameData", code: 4,
+                          userInfo: [NSLocalizedDescriptionKey: "readable_asset_manifest.json missing from app bundle"])
+        }
+        let manifest = try JSONDecoder().decode(ReadableAssetManifest.self, from: Data(contentsOf: url))
+        guard manifest.schema == "bo2ioscs-readable-asset-manifest-v1",
+              !manifest.records.isEmpty,
+              !manifest.records.contains(where: { $0.originalPath.lowercased().hasSuffix(".ff") }) else {
+            throw NSError(domain: "BO2IOSCS.GameData", code: 5,
+                          userInfo: [NSLocalizedDescriptionKey: "invalid or unsafe readable asset manifest"])
+        }
+        return manifest
     }
 
     static func loadWeapons(bundle: Bundle = .main) throws -> [WeaponDefinition] {

@@ -18,6 +18,7 @@ final class GameViewController: UIViewController, SCNSceneRendererDelegate {
     private var finished = false
     private var loadedMapName = "none"
     private var loadedWeaponCount = 0
+    private var loadedReadableAssetCount = 0
 
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -51,8 +52,10 @@ final class GameViewController: UIViewController, SCNSceneRendererDelegate {
         do {
             let map = try GameDataLoader.loadValidationMap()
             let weapons = try GameDataLoader.loadWeapons()
+            let readableManifest = try GameDataLoader.loadReadableAssetManifest()
             loadedMapName = map.name
             loadedWeaponCount = weapons.count
+            loadedReadableAssetCount = readableManifest.records.count
             if let first = weapons.first { weaponState = PlayerWeaponState(definition: first) }
             sim = MatchSimulation(botCount: 4, objective: map.objective)
             for box in map.boxes {
@@ -165,7 +168,7 @@ final class GameViewController: UIViewController, SCNSceneRendererDelegate {
         if autotest && !finished && Date().timeIntervalSince(started) >= 10 {
             finished = true
             let duration = Date().timeIntervalSince(started)
-            let gameDataReady = loadedMapName != "none" && loadedWeaponCount > 0 && weaponState != nil && playerCamera != nil
+            let gameDataReady = loadedMapName != "none" && loadedWeaponCount > 0 && loadedReadableAssetCount > 0 && weaponState != nil && playerCamera != nil
             let result: [String: Any] = [
                 "status": gameDataReady ? "PASS" : "FAIL",
                 "duration_seconds": duration,
@@ -184,6 +187,8 @@ final class GameViewController: UIViewController, SCNSceneRendererDelegate {
                 "normalized_map_loaded": loadedMapName != "none",
                 "loaded_map": loadedMapName,
                 "weapon_definitions_loaded": loadedWeaponCount,
+                "readable_asset_manifest_loaded": loadedReadableAssetCount > 0,
+                "readable_asset_records": loadedReadableAssetCount,
                 "weapon_runtime_ready": weaponState != nil,
                 "magazine_ammo": weaponState?.magazine ?? -1,
                 "reserve_ammo": weaponState?.reserve ?? -1,
