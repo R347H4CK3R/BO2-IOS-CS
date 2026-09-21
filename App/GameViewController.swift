@@ -19,6 +19,8 @@ final class GameViewController: UIViewController, SCNSceneRendererDelegate {
     private var loadedMapName = "none"
     private var loadedWeaponCount = 0
     private var loadedReadableAssetCount = 0
+    private var loadedMap: RuntimeMapDefinition?
+    private let playerTeam: Team = .attack
 
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -53,6 +55,7 @@ final class GameViewController: UIViewController, SCNSceneRendererDelegate {
             let map = try GameDataLoader.loadValidationMap()
             let weapons = try GameDataLoader.loadWeapons()
             let readableManifest = try GameDataLoader.loadReadableAssetManifest()
+            loadedMap = map
             loadedMapName = map.name
             loadedWeaponCount = weapons.count
             loadedReadableAssetCount = readableManifest.records.count
@@ -79,7 +82,15 @@ final class GameViewController: UIViewController, SCNSceneRendererDelegate {
 
         let camera = SCNNode()
         camera.camera = SCNCamera()
-        camera.position = SCNVector3(0, 1.7, 8)
+        if let map = loadedMap,
+           let spawn = RuntimePlayerPlacement.spawn(for: playerTeam, from: map.spawnPoints) {
+            camera.position = SCNVector3(Float(spawn.x * map.worldScale),
+                                         Float(spawn.y * map.worldScale + 0.7),
+                                         Float(spawn.z * map.worldScale))
+            RuntimeLog.stage("PLAYER_NORMALIZED_SPAWN_APPLIED")
+        } else {
+            camera.position = SCNVector3(0, 1.7, 8)
+        }
         scene.rootNode.addChildNode(camera)
         sceneView.pointOfView = camera
         playerCamera = camera
@@ -125,8 +136,13 @@ final class GameViewController: UIViewController, SCNSceneRendererDelegate {
             case "FIRE": self.firePlayerWeapon()
             case "RELOAD": _ = self.weaponState?.beginReload()
             case "USE":
-                if self.sim.objectiveState == .planted { self.sim.beginDefuse() }
-                else if self.sim.objectiveState == .idle { self.sim.beginPlant() }
+                guard let camera = self.playerCamera else { break }
+                let p = camera.presentation.worldPosition
+                if self.sim.objectiveState == .planted {
+                    _ = self.sim.beginDefuse(x: Double(p.x), y: Double(p.y), z: Double(p.z))
+                } else if self.sim.objectiveState == .idle {
+                    _ = self.sim.beginPlant(x: Double(p.x), y: Double(p.y), z: Double(p.z))
+                }
             default: break
             }
         }
@@ -242,6 +258,8 @@ final class GameViewController: UIViewController, SCNSceneRendererDelegate {
                 "weapon_runtime_ready": weaponState != nil,
                 "magazine_ammo": weaponState?.magazine ?? -1,
                 "reserve_ammo": weaponState?.reserve ?? -1,
+                "player_normalized_spawn_ready": loadedMap.flatMap { RuntimePlayerPlacement.spawn(for: playerTeam, from: $0.spawnPoints) } != nil,
+                "objective_position_gating_ready": sim.objective != nil && playerCamera != nil,
                 "performance_scope": "simulator-only"
             ]
             RuntimeLog.writeJSON(result, name: "AUTOTEST_RESULT.json")
