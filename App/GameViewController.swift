@@ -121,7 +121,7 @@ final class GameViewController: UIViewController, SCNSceneRendererDelegate {
         hud.onAction = { [weak self] action in
             guard let self else { return }
             switch action {
-            case "FIRE": _ = self.weaponState?.fire()
+            case "FIRE": self.firePlayerWeapon()
             case "RELOAD": _ = self.weaponState?.beginReload()
             case "USE":
                 if self.sim.objectiveState == .planted { self.sim.beginDefuse() }
@@ -130,6 +130,34 @@ final class GameViewController: UIViewController, SCNSceneRendererDelegate {
             }
         }
         view.addSubview(hud)
+    }
+
+    private func firePlayerWeapon() {
+        guard let weaponState, weaponState.fire(), let camera = playerCamera else { return }
+        let origin = camera.presentation.worldPosition
+        let forward = SCNVector3(-sinf(yaw) * cosf(pitch), sinf(pitch), -cosf(yaw) * cosf(pitch))
+        var best: (index: Int, distance: Float)?
+        for (index, node) in botNodes.enumerated() where sim.bots.indices.contains(index) && sim.bots[index].alive {
+            let p = node.presentation.worldPosition
+            let dx = p.x - origin.x, dy = p.y - origin.y, dz = p.z - origin.z
+            let along = dx * forward.x + dy * forward.y + dz * forward.z
+            guard along > 0 && along <= 100 else { continue }
+            let px = dx - forward.x * along, py = dy - forward.y * along, pz = dz - forward.z * along
+            let miss = sqrtf(px * px + py * py + pz * pz)
+            guard miss <= 0.75 else { continue }
+            if best == nil || along < best!.distance { best = (index, along) }
+        }
+        guard let hit = best else { return }
+        _ = sim.playerFire(weapon: weaponState.definition, at: hit.index)
+        syncBotNodes()
+    }
+
+    private func syncBotNodes() {
+        for (index, node) in botNodes.enumerated() where sim.bots.indices.contains(index) {
+            let bot = sim.bots[index]
+            node.isHidden = !bot.alive
+            node.opacity = bot.alive ? CGFloat(max(0.25, Double(bot.health) / 100.0)) : 0
+        }
     }
 
     private func updatePlayer(dt: TimeInterval) {
@@ -160,6 +188,7 @@ final class GameViewController: UIViewController, SCNSceneRendererDelegate {
         weaponState?.tick(dt: dt)
         updatePlayer(dt: dt)
         frameCount += 1
+        syncBotNodes()
         for (i, node) in botNodes.enumerated() {
             let phase = Float(time * 0.8 + Double(i))
             node.position.x = Float(-6 + i * 4) + sin(phase) * 1.5
@@ -179,6 +208,10 @@ final class GameViewController: UIViewController, SCNSceneRendererDelegate {
                 "objective_ticks": sim.objectiveTicks,
                 "collision_ready": true,
                 "weapon_fire_worked": sim.shotsFired > 0,
+                "player_shots_fired": sim.playerShotsFired,
+                "player_hits": sim.playerHits,
+                "player_eliminations": sim.playerEliminations,
+                "player_combat_integrated": sim.playerCombatIntegrated,
                 "touch_ui_initialized": true,
                 "touch_movement_ready": playerCamera != nil,
                 "touch_look_ready": playerCamera != nil,
