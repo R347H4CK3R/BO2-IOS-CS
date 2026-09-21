@@ -76,6 +76,25 @@ final class BO2IOSCSTests: XCTestCase {
         XCTAssertFalse(manifest.records[0].originalPath.hasSuffix(".ff"))
     }
 
+
+    func testNormalizedMapSpawnsDriveRoundState() {
+        let spawns = [
+            RuntimeSpawnPoint(team: .attack, x: -7, y: 1, z: 6),
+            RuntimeSpawnPoint(team: .defense, x: 7, y: 1, z: -6)
+        ]
+        let weapon = WeaponDefinition(id: "test_rifle", damage: 100, fireRate: 9,
+                                      magazineCapacity: 30, reserveAmmo: 90,
+                                      reloadDuration: 2.3, recoil: 0.9, spread: 0.02)
+        let sim = MatchSimulation(botCount: 4, spawnPoints: spawns)
+        XCTAssertEqual(sim.bots[0].x, -7)
+        XCTAssertEqual(sim.bots[1].x, 7)
+        XCTAssertTrue(sim.fire(weapon: weapon, from: 0, at: 1))
+        XCTAssertTrue(sim.fire(weapon: weapon, from: 2, at: 3))
+        XCTAssertEqual(sim.round, 2)
+        XCTAssertEqual(sim.bots[0].x, -7)
+        XCTAssertEqual(sim.bots[1].x, 7)
+    }
+
     func testPlantAndDetonationScoresAttack() {
         let objective = RuntimeObjective(type: "plant_defuse", x: 0, y: 0, z: 0,
                                          radius: 2.5, plantDuration: 1, fuseDuration: 2,
