@@ -14,6 +14,9 @@ targets:
       - path: App
       - path: GameData
         buildPhase: resources
+      - path: GeneratedGameData
+        buildPhase: resources
+        optional: true
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.r347h4ck3r.bo2ioscs
