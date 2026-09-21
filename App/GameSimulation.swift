@@ -160,6 +160,9 @@ final class BotState {
     var health = 100
     var shots = 0
     var deaths = 0
+    var x: Double = 0
+    var y: Double = 0
+    var z: Double = 0
     var alive: Bool { health > 0 }
     init(id: Int, team: Team) { self.id = id; self.team = team }
 }
@@ -181,10 +184,24 @@ final class MatchSimulation {
     private var botCombatAccumulator: TimeInterval = 0
     let bots: [BotState]
     let objective: RuntimeObjective?
+    private let spawnPoints: [RuntimeSpawnPoint]
 
-    init(botCount: Int = 4, objective: RuntimeObjective? = nil) {
+    init(botCount: Int = 4, objective: RuntimeObjective? = nil, spawnPoints: [RuntimeSpawnPoint] = []) {
         self.objective = objective
+        self.spawnPoints = spawnPoints
         bots = (0..<botCount).map { BotState(id: $0, team: $0.isMultiple(of: 2) ? .attack : .defense) }
+        applySpawnPoints()
+    }
+
+    private func applySpawnPoints() {
+        for bot in bots {
+            let teamSpawns = spawnPoints.filter { $0.team == bot.team }
+            guard !teamSpawns.isEmpty else { continue }
+            let spawn = teamSpawns[(bot.id / 2) % teamSpawns.count]
+            bot.x = spawn.x
+            bot.y = spawn.y
+            bot.z = spawn.z
+        }
     }
 
     @discardableResult
@@ -239,6 +256,7 @@ final class MatchSimulation {
         objectiveElapsed = 0
         objectiveState = .idle
         for bot in bots { bot.health = 100 }
+        applySpawnPoints()
     }
 
     func botCombatTick(dt: TimeInterval, weapon: WeaponDefinition) {
