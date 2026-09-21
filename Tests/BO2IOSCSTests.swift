@@ -58,6 +58,17 @@ final class BO2IOSCSTests: XCTestCase {
         XCTAssertEqual(state.reserve, 1)
     }
 
+    func testBotCombatProducesEnemyDamageAndEliminations() {
+        let weapon = WeaponDefinition(id: "test_rifle", damage: 60, fireRate: 4,
+                                      magazineCapacity: 30, reserveAmmo: 90,
+                                      reloadDuration: 2.3, recoil: 0.9, spread: 0.02)
+        let sim = MatchSimulation(botCount: 4)
+        for _ in 0..<20 { sim.botCombatTick(dt: 0.25, weapon: weapon) }
+        XCTAssertGreaterThan(sim.shotsFired, 0)
+        XCTAssertGreaterThan(sim.eliminations, 0)
+        XCTAssertGreaterThanOrEqual(sim.round, 2)
+    }
+
     func testPlantAndDetonationScoresAttack() {
         let objective = RuntimeObjective(type: "plant_defuse", x: 0, y: 0, z: 0,
                                          radius: 2.5, plantDuration: 1, fuseDuration: 2,
