@@ -8,22 +8,21 @@
     "PS3 tiled layouts and swizzle variants other than explicitly-authoritative Morton2D remain unsupported; the converter intentionally does not infer layout metadata or padding."
   ],
   "last_successful_build": {
-    "workflow_run": "35584146408",
-    "run_number": 110,
-    "commit": "51819ab5847de94e728608f19b556b9f7eda8324"
+    "workflow_run": "35602085149",
+    "run_number": 115,
+    "commit": "6c1527404c226187d1a235c3b40f4e41056f76d8"
   },
-  "simulator_test_status": "PASS - run #110 validates the fully-green simulator/runtime baseline plus normalized objective proximity gating primitives.",
-  "device_build_status": "PASS - unsigned ARM64 app build and pinned Xash3D FWGS ARM64 device engine build validated in run #110.",
-  "ipa_validation_status": "PASS - run #110 validates unsigned IPA packaging while proprietary PS3 source-like files remain excluded.",
+  "simulator_test_status": "PASS - run #115 is fully green after hardened simulator autotest launch polling and validates the current normalized player/objective runtime integration.",
+  "device_build_status": "PASS - run #115 produced the unsigned ARM64 app and pinned Xash3D FWGS ARM64 device engine artifacts.",
+  "ipa_validation_status": "PASS - run #115 produced both BO2IOSCS-unsigned-IPA and BO2IOSCS-Xash-integrated-IPA artifacts while proprietary PS3 source-like files remain excluded.",
   "ipa_path": "Build/BO2IOSCS-unsigned.ipa",
-  "xash_runtime_status": "PASS - run #110 validates Xash3D FWGS simulator/runtime startup alongside the gameplay/runtime changes.",
+  "xash_runtime_status": "PASS - run #115 produced Xash simulator runtime results and validated Xash3D FWGS simulator/runtime startup.",
   "asset_scanner_status": "PASS - BO2 fastfile headers and PS3 IPAK containers recognized; encrypted fastfile payloads remain intentionally unsupported; authoritative metadata and structurally readable asset paths remain the supported conversion route.",
   "next_work": [
-    "Wire the player camera spawn and live player position to normalized map spawn/objective metadata and use position-aware plant/defuse actions.",
-    "Validate complete objective round transitions in simulator CI.",
-    "Consolidate the final unsigned ARM64 IPA after the next fully-green gameplay/runtime batch.",
+    "Validate complete objective round transitions in simulator CI using live normalized player position.",
+    "Consolidate the final unsigned ARM64 IPA release candidate from the fully-green gameplay/runtime baseline.",
     "Only accept legally decrypted/normalized fastfile zone data or structurally readable assets; never bypass encryption.",
     "Perform physical iPhone installation/runtime validation once the IPA is available to the user."
   ],
-  "simulator_status": "PASS - run #110 is fully green with normalized objective proximity primitives validated."
+  "simulator_status": "PASS - run #115 is fully green with hardened launch polling and current gameplay/runtime integration validated."
 }
