@@ -120,4 +120,30 @@ final class BO2IOSCSTests: XCTestCase {
         XCTAssertEqual(sim.objectiveState, .defused)
         XCTAssertEqual(sim.scoreDefense, 1)
     }
+    func testObjectiveActionsRequirePlayerProximity() {
+        let objective = RuntimeObjective(type: "plant_defuse", x: 2, y: 1, z: -3,
+                                         radius: 2.5, plantDuration: 1, fuseDuration: 10,
+                                         defuseDuration: 1)
+        let sim = MatchSimulation(botCount: 4, objective: objective)
+        XCTAssertFalse(sim.beginPlant(x: 20, y: 1, z: -3))
+        XCTAssertEqual(sim.objectiveState, .idle)
+        XCTAssertTrue(sim.beginPlant(x: 2, y: 1, z: -3))
+        sim.tick(dt: 1)
+        XCTAssertEqual(sim.objectiveState, .planted)
+        XCTAssertFalse(sim.beginDefuse(x: -20, y: 1, z: -3))
+        XCTAssertTrue(sim.beginDefuse(x: 2, y: 1, z: -3))
+    }
+
+    func testRuntimePlayerPlacementUsesTeamSpawn() {
+        let spawns = [
+            RuntimeSpawnPoint(team: .attack, x: -7, y: 1, z: 6),
+            RuntimeSpawnPoint(team: .defense, x: 7, y: 1, z: -6)
+        ]
+        let placement = RuntimePlayerPlacement.spawn(for: .attack, from: spawns)
+        XCTAssertNotNil(placement)
+        XCTAssertEqual(placement?.x, -7)
+        XCTAssertEqual(placement?.y, 1)
+        XCTAssertEqual(placement?.z, 6)
+    }
+
 }
