@@ -71,7 +71,7 @@ replacement = """void IOS_LaunchDialog( void )
 	const char *autotest = getenv( "BO2IOSCS_AUTOTEST" );
 	if( autotest && autotest[0] == '1' )
 	{
-		const char *testargs[] = { "xash", "-dev", "2", "-log", "-console" };
+		const char *testargs[] = { "xash", "-dev", "2", "-log", "-console", "+exec", "bo2ioscs_runtime.cfg" };
 		const int count = (int)( sizeof( testargs ) / sizeof( testargs[0] ) );
 
 		[[NSFileManager defaultManager]

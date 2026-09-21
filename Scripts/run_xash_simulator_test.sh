@@ -42,6 +42,10 @@ xcrun simctl bootstatus "$UDID" -b
   echo "Readable asset manifest missing from Xash simulator app" >&2
   exit 4
 }
+[ -f "$APP/bo2ioscs/bo2ioscs_runtime.cfg" ] || {
+  echo "Generated runtime metadata config missing from Xash simulator app" >&2
+  exit 5
+}
 [ -f "$APP/bo2ioscs/autoexec.cfg" ] || {
   echo "Generated Xash runtime config missing" >&2
   exit 5
@@ -50,7 +54,7 @@ xcrun simctl install "$UDID" "$APP" > "$LOGDIR/install.log" 2>&1
 
 (
   xcrun simctl spawn "$UDID" log stream --style compact --level debug \
-    --predicate 'process == "xash" OR eventMessage CONTAINS "BO2IOSCS_AUTOTEST" OR eventMessage CONTAINS "Xash"' \
+    --predicate 'process == "xash" OR eventMessage CONTAINS "BO2IOSCS_AUTOTEST" OR eventMessage CONTAINS "BO2IOSCS_RUNTIME_METADATA_LOADED" OR eventMessage CONTAINS "Xash"' \
     > "$LOGDIR/xash-live.log" 2>&1
 ) &
 LOG_PID=$!
@@ -74,12 +78,16 @@ xcrun simctl spawn "$UDID" log show --last 3m --style compact \
 
 AUTOTEST_MARKER=0
 ENGINE_MARKER=0
+RUNTIME_METADATA_MARKER=0
 GAMEDATA_CONFIG_MARKER=0
 if grep -q 'BO2IOSCS_AUTOTEST launch path enabled' "$LOGDIR/xash.log" "$LOGDIR/xash-live.log" 2>/dev/null; then
   AUTOTEST_MARKER=1
 fi
 if grep -Eiq 'Xash3D|Xash:|Host_Init|filesystem|gameinfo|bo2ioscs' "$LOGDIR/xash.log" "$LOGDIR/xash-live.log" 2>/dev/null; then
   ENGINE_MARKER=1
+fi
+if grep -q 'BO2IOSCS_RUNTIME_METADATA_LOADED' "$LOGDIR/xash.log" "$LOGDIR/xash-live.log" 2>/dev/null; then
+  RUNTIME_METADATA_MARKER=1
 fi
 if grep -q 'BO2IOSCS_GAMEDATA_CONFIG_LOADED' "$LOGDIR/xash.log" "$LOGDIR/xash-live.log" 2>/dev/null; then
   GAMEDATA_CONFIG_MARKER=1
@@ -98,6 +106,7 @@ cat > "$REPORT" <<EOF
 - simulator UDID: $UDID
 - noninteractive iOS launch marker: $AUTOTEST_MARKER
 - engine/filesystem marker: $ENGINE_MARKER
+- runtime metadata execution marker: $RUNTIME_METADATA_MARKER
 - GameData runtime-config marker: $GAMEDATA_CONFIG_MARKER
 - screenshot: $LOGDIR/xash-simulator.png
 - logs: $LOGDIR/xash.log

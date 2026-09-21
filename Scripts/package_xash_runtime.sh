@@ -47,6 +47,35 @@ if [ -d "$ROOT/GeneratedGameData" ]; then
   cp -R "$ROOT/GeneratedGameData/." "$APP/bo2ioscs/GameData/"
 fi
 
+# Compile normalized project metadata into a tiny Xash config that is executed
+# by the native runtime. This consumes only safe JSON metadata already accepted
+# by the project and never decrypts or interprets encrypted BO2 fastfiles.
+python3 - "$APP/bo2ioscs/GameData/validation_map.json"           "$APP/bo2ioscs/GameData/TestData/readable_asset_manifest.json"           "$APP/bo2ioscs/bo2ioscs_runtime.cfg" <<'PY'
+import json, re, sys
+from pathlib import Path
+
+map_path, manifest_path, cfg_path = map(Path, sys.argv[1:])
+m = json.loads(map_path.read_text())
+manifest = json.loads(manifest_path.read_text())
+
+if m.get("format") != "bo2ioscs-normalized-map-v1":
+    raise SystemExit("unsupported normalized map format")
+if manifest.get("schema") != "bo2ioscs-readable-asset-manifest-v1":
+    raise SystemExit("unsupported readable asset manifest")
+records = manifest.get("records")
+if not isinstance(records, list) or not records:
+    raise SystemExit("readable asset manifest is empty")
+if any(str(r.get("original_path", "")).lower().endswith(".ff") for r in records):
+    raise SystemExit("encrypted fastfile record is not permitted in runtime manifest")
+
+name = re.sub(r"[^A-Za-z0-9_-]", "_", str(m.get("name", "unknown")))[:64]
+cfg_path.write_text(
+    "echo BO2IOSCS_RUNTIME_METADATA_LOADED\n"
+    f"echo BO2IOSCS_NORMALIZED_MAP_{name}\n"
+    f"echo BO2IOSCS_READABLE_ASSET_COUNT_{len(records)}\n"
+)
+PY
+
 # Generate a project-owned Xash startup config from normalized safe metadata so CI
 # can prove the engine consumes GameData rather than merely carrying it in the bundle.
 python3 - "$APP/bo2ioscs/GameData/validation_map.json"           "$APP/bo2ioscs/GameData/TestData/readable_asset_manifest.json"           "$APP/bo2ioscs/autoexec.cfg" <<'PY'
@@ -123,7 +152,7 @@ if [ "$MODE" = "device" ]; then
   )
 
   IPA="$OUT/BO2IOSCS-Xash-integrated.ipa"
-  [ -s "$IPA" ] || { echo "Xash bootstrap IPA was not produced"; exit 5; }
+  [ -s "$IPA" ] || { echo "Integrated Xash IPA was not produced"; exit 5; }
 
   zipinfo -1 "$IPA" > "$OUT/IPA_CONTENTS.txt"
   grep -qx 'Payload/BO2IOSCS.app/xash' "$OUT/IPA_CONTENTS.txt"
@@ -131,6 +160,7 @@ if [ "$MODE" = "device" ]; then
   grep -qx 'Payload/BO2IOSCS.app/bo2ioscs/autoexec.cfg' "$OUT/IPA_CONTENTS.txt"
   grep -qx 'Payload/BO2IOSCS.app/bo2ioscs/GameData/validation_map.json' "$OUT/IPA_CONTENTS.txt"
   grep -qx 'Payload/BO2IOSCS.app/bo2ioscs/GameData/TestData/readable_asset_manifest.json' "$OUT/IPA_CONTENTS.txt"
+  grep -qx 'Payload/BO2IOSCS.app/bo2ioscs/bo2ioscs_runtime.cfg' "$OUT/IPA_CONTENTS.txt"
   grep -qx 'Payload/BO2IOSCS.app/SDL2.framework/SDL2' "$OUT/IPA_CONTENTS.txt"
 
   cat > "$OUT/XASH_RUNTIME_REPORT.md" <<REPORT
@@ -144,6 +174,7 @@ if [ "$MODE" = "device" ]; then
 - proprietary assets included: no
 - signing: ad-hoc (intended for later sideload/re-sign workflow)
 - gameplay content: project GameData and the safe readable-asset manifest are integrated into the Xash app bundle
+- runtime metadata config: generated and executed by Xash at startup
 - runtime config: autoexec.cfg is generated from normalized map/manifest metadata and executed by Xash at startup
 - converted BO2 content: included only when legally generated/decrypted or structurally readable inputs are supplied
 REPORT

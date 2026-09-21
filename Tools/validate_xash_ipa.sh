@@ -23,6 +23,8 @@ fail() {
 grep -q 'BO2IOSCS_GAMEDATA_CONFIG_LOADED' "$APP/bo2ioscs/autoexec.cfg" || fail "runtime config marker missing"
 [ -f "$APP/bo2ioscs/GameData/validation_map.json" ] || fail "normalized map missing"
 [ -f "$APP/bo2ioscs/GameData/TestData/readable_asset_manifest.json" ] || fail "readable asset manifest missing"
+[ -f "$APP/bo2ioscs/bo2ioscs_runtime.cfg" ] || fail "generated runtime metadata config missing"
+grep -q "^echo BO2IOSCS_RUNTIME_METADATA_LOADED$" "$APP/bo2ioscs/bo2ioscs_runtime.cfg" || fail "runtime metadata execution marker missing"
 
 EXEC_TYPE="$(file "$APP/xash")"
 # `file` describes thin binaries as "Mach-O 64-bit executable arm64" and may
@@ -60,6 +62,7 @@ cat > "$REPORT" <<EOF
 - generated GameData runtime config: present
 - normalized GameData map: present
 - readable asset manifest: present
+- generated runtime metadata config: present
 - proprietary PS3 source-like files: absent
 - app bytes (approx): $APP_BYTES
 EOF
