@@ -19,7 +19,8 @@ class FastFileHeader:
         return asdict(self)
 
 def parse_fastfile_header(path: Path) -> FastFileHeader:
-    data = path.read_bytes()
+    with path.open("rb") as stream:
+        data = stream.read(312)
     if len(data) < 312:
         raise ValueError("fastfile too small for authenticated BO2 header")
     magic = data[0:8].decode("ascii", errors="replace")

@@ -5,3 +5,11 @@ PS3_GAME/
 Build/ProprietaryAssets/
 xcuserdata/
 .DS_Store
+
+# Private conversion outputs and local SELF configuration
+GeneratedGameData/*
+!GeneratedGameData/README.md
+GameDataIntermediate/
+LocalConfig.json
+__pycache__/
+*.pyc

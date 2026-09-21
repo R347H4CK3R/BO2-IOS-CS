@@ -2,7 +2,7 @@ name: iOS Build
 
 on:
   push:
-    branches: [main]
+    branches: [main, codex/local-ps3-import]
   workflow_dispatch:
 
 permissions:

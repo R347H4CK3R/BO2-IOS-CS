@@ -15,8 +15,16 @@ TEXTURE_LAYOUTS = {"linear", "ps3_tiled", "ps3_swizzled", "unknown"}
 HASH_RE = re.compile(r"^0x[0-9A-Fa-f]{8}$")
 READABLE_IMPORT_EXTENSIONS = {".wav", ".ogg", ".png", ".dds", ".tga", ".jpg", ".jpeg", ".obj", ".json", ".cfg", ".txt", ".gsc"}
 
+def file_hash(path: Path):
+    digest = hashlib.sha256()
+    with path.open("rb") as stream:
+        for block in iter(lambda: stream.read(1024 * 1024), b""):
+            digest.update(block)
+    return digest.hexdigest()
+
 def detect(path: Path):
-    head = path.read_bytes()[:16]
+    with path.open("rb") as stream:
+        head = stream.read(16)
     for sig, result in SIGNATURES.items():
         if head.startswith(sig): return result
     ext = path.suffix.lower()
@@ -30,7 +38,8 @@ def detect(path: Path):
     return "unknown", "unknown"
 
 def endian_probe(path: Path):
-    data = path.read_bytes()[:4]
+    with path.open("rb") as stream:
+        data = stream.read(4)
     if len(data) < 4: return None
     return {"u32_be": struct.unpack(">I", data)[0], "u32_le": struct.unpack("<I", data)[0]}
 
@@ -64,7 +73,7 @@ def scan(source: Path, output: Path):
                    "detected_format": fmt, "probable_asset_class": cls, "compression": "unknown",
                    "endianness": endian_probe(p), "conversion_status": "discovered" if fmt != "unknown" else "unsupported",
                    "converter_used": None, "generated_output_path": None,
-                   "sha256_prefix": hashlib.sha256(p.read_bytes()).hexdigest()[:16],
+                   "sha256_prefix": file_hash(p)[:16],
                    "warnings": [] if fmt != "unknown" else ["Unknown format preserved for diagnostics"], "errors": []}
             if fmt == "bo2_ipak":
                 try:
@@ -146,7 +155,7 @@ def import_readable_assets(source: Path, output: Path):
             "detected_format": fmt,
             "asset_class": cls,
             "size": p.stat().st_size,
-            "sha256": hashlib.sha256(p.read_bytes()).hexdigest(),
+            "sha256": file_hash(p),
             "status": "imported_readable_asset"
         })
     manifest = {
