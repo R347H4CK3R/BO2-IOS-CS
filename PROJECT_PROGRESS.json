@@ -1,6 +1,11 @@
 {
   "current_phase": 5,
-  "completed_phases": [1, 2, 3, 4],
+  "completed_phases": [
+    1,
+    2,
+    3,
+    4
+  ],
   "failed_tests": [],
   "known_blockers": [
     "The user-owned PS3 BO2 .ff fastfiles are authenticated/encrypted TAff0100 containers. This project intentionally does not bypass that encryption; payload conversion requires user-provided legally decrypted/normalized fastfile data.",
@@ -8,22 +13,22 @@
     "PS3 tiled layouts and swizzle variants other than explicitly-authoritative Morton2D remain unsupported; the converter intentionally does not infer layout metadata or padding."
   ],
   "last_successful_build": {
-    "workflow_run": 35543030188,
-    "run_number": 78,
-    "commit": "8464e675ce4a6f3b4b33f7306dd027334da08d33"
+    "workflow_run": 35548974046,
+    "run_number": 83,
+    "commit": "cdf5f08e9e14d62a9cd5241db11bb31c17cdf5a0"
   },
-  "simulator_test_status": "PASS - normalized GameData map and weapon definitions load into the app runtime; touch-driven player camera movement/aiming is CI validated; app simulator autotest and native pinned Xash3D FWGS simulator startup test pass",
+  "simulator_test_status": "PASS - normalized GameData map/weapon loading, touch movement/aim, ammo/reload runtime state, objective flow, and deterministic bot combat are CI validated; app simulator autotest and pinned Xash3D FWGS simulator startup test pass",
   "device_build_status": "PASS - unsigned ARM64 app build and pinned Xash3D FWGS ARM64 device engine build",
   "ipa_validation_status": "PASS - BO2IOSCS unsigned Swift runtime IPA and integrated Xash runtime IPA packaging validation",
   "ipa_path": "Build/BO2IOSCS-unsigned.ipa",
   "xash_runtime_status": "PASS - pinned Xash3D FWGS builds for iOS Simulator and ARM64 iOS device; safe project GameData is integrated into the Xash runtime app/IPA; simulator startup test passes",
-  "asset_scanner_status": "PASS - BO2 fastfile headers and PS3 IPAK containers recognized; encrypted fastfile payloads remain intentionally unsupported; IPAK LZO payload extraction with CRC validation; authoritative texture metadata v1 mapping; strict runtime texture writer; explicit metadata-gated Morton2D PS3 swizzle conversion validated without guessing missing metadata",
+  "asset_scanner_status": "PASS - BO2 fastfile headers and PS3 IPAK containers recognized; encrypted fastfile payloads remain intentionally unsupported; IPAK LZO payload extraction with CRC validation; authoritative texture metadata mapping; strict runtime texture generation; explicit metadata-gated Morton2D PS3 swizzle conversion validated without guessing missing metadata; authoritative IPAK-to-runtime-texture generation validated in run #80",
   "next_work": [
-    "Implement and CI-validate bot combat/runtime behavior on project-owned synthetic normalized content.",
+    "Add a safe readable-asset import stage for structurally readable user-owned formats (for example WAV/OGG/PNG/DDS/OBJ/JSON) into GeneratedGameData with provenance and integrity metadata, explicitly excluding encrypted fastfile payloads.",
+    "Connect generated readable-asset manifests and normalized content to executable runtime loading while keeping public CI fixtures synthetic/project-owned.",
     "Promote the integrated Xash runtime IPA toward the primary game deliverable and connect normalized GameData to executable map/game logic rather than validation-only data.",
     "Accept only user-provided legally decrypted/normalized fastfile zone data for map, model, entity, and image metadata conversion; do not implement fastfile encryption bypass.",
     "Implement additional PS3 tiled/swizzled texture layouts only where authoritative layout metadata is available.",
-    "Continue non-encrypted audio/container inventory without modifying originals.",
     "Perform physical iPhone installation/runtime validation once a device-side test is available."
   ]
 }
