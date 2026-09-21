@@ -57,7 +57,7 @@ final class GameViewController: UIViewController, SCNSceneRendererDelegate {
             loadedWeaponCount = weapons.count
             loadedReadableAssetCount = readableManifest.records.count
             if let first = weapons.first { weaponState = PlayerWeaponState(definition: first) }
-            sim = MatchSimulation(botCount: 4, objective: map.objective)
+            sim = MatchSimulation(botCount: 4, objective: map.objective, spawnPoints: map.spawnPoints)
             for box in map.boxes {
                 let node = SCNNode(geometry: SCNBox(width: CGFloat(box.sx * map.worldScale),
                                                    height: CGFloat(box.sy * map.worldScale),
@@ -87,7 +87,8 @@ final class GameViewController: UIViewController, SCNSceneRendererDelegate {
 
         for i in 0..<4 {
             let bot = SCNNode(geometry: SCNCapsule(capRadius: 0.45, height: 1.8))
-            bot.position = SCNVector3(Float(-6 + i * 4), 0.9, Float(-3 + (i % 2) * 6))
+            let state = sim.bots[i]
+            bot.position = SCNVector3(Float(state.x), Float(state.y), Float(state.z))
             bot.geometry?.firstMaterial?.diffuse.contents = i.isMultiple(of: 2) ? UIColor.systemOrange : UIColor.systemBlue
             bot.physicsBody = SCNPhysicsBody(type: .kinematic, shape: nil)
             scene.rootNode.addChildNode(bot)
