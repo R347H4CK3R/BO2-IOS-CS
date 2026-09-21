@@ -13,9 +13,9 @@
     "PS3 tiled layouts and swizzle variants other than explicitly-authoritative Morton2D remain unsupported; the converter intentionally does not infer layout metadata or padding."
   ],
   "last_successful_build": {
-    "workflow_run": "35554316862",
-    "run_number": 96,
-    "commit": "4602bd0f5eef78174f890a41cd782ad2a8688c97"
+    "workflow_run": "35560015192",
+    "run_number": 105,
+    "commit": "0c20693ad0e3e2704c7f7726e2abba1788b29022"
   },
   "simulator_test_status": "PASS - normalized GameData map/weapon loading, touch movement/aim, ammo/reload runtime state, objective flow, deterministic bot combat, and the readable-asset converter batch are CI validated; app simulator autotest and pinned Xash3D FWGS simulator startup test pass",
   "device_build_status": "PASS - unsigned ARM64 app build and pinned Xash3D FWGS ARM64 device engine build",
@@ -24,10 +24,10 @@
   "xash_runtime_status": "PASS - run #91 validates Xash3D FWGS startup and execution of generated runtime metadata derived from safe normalized GameData; player combat integration is now queued for CI validation.",
   "asset_scanner_status": "PASS - BO2 fastfile headers and PS3 IPAK containers recognized; encrypted fastfile payloads remain intentionally unsupported; IPAK LZO payload extraction with CRC validation; authoritative texture metadata mapping; strict runtime texture generation; explicit metadata-gated Morton2D PS3 swizzle conversion; authoritative IPAK-to-runtime-texture generation validated in run #80; structurally readable asset import with path preservation and SHA-256 provenance validated in run #85 while encrypted .ff inputs remain excluded",
   "next_work": [
-    "Add project-owned executable Xash gameplay/map content so the integrated Xash IPA advances from engine/runtime-metadata startup to an actual playable synthetic match.",
-    "CI-validate Xash player spawn, movement, weapon fire, target damage/death, and match/round reset using only project-owned synthetic content.",
+    "Integrate player spawn and objective proximity/use gating from normalized map metadata and validate complete round transitions in simulator CI.",
+    "Consolidate the final unsigned ARM64 IPA after the next fully-green gameplay/runtime batch.",
     "Only accept legally decrypted/normalized fastfile zone data or structurally readable assets; never bypass encryption.",
-    "Consolidate the final ARM64 IPA and perform physical iPhone validation once available."
+    "Perform physical iPhone installation/runtime validation once the IPA is available to the user."
   ],
-  "simulator_status": "PASS - run #96 validates normalized GameData loading, touch movement/aim, ammo/reload, objective flow, deterministic bot combat, and CI-gated player FIRE -> weapon damage -> bot health/death/elimination with rendered bot state synchronization."
+  "simulator_status": "PASS - run #105 validates normalized map-driven bot spawn positions and round-reset spawn restoration in addition to prior GameData, touch, weapon, objective, bot combat, and player combat validation."
 }
