@@ -18,7 +18,9 @@ fail() {
 [ -f "$APP/xash" ] || fail "xash executable missing"
 [ -f "$APP/Info.plist" ] || fail "Info.plist missing"
 [ -f "$APP/SDL2.framework/SDL2" ] || fail "SDL2.framework missing"
-[ -f "$APP/bo2ioscs/gameinfo.txt" ] || fail "bootstrap gameinfo missing"
+[ -f "$APP/bo2ioscs/gameinfo.txt" ] || fail "gameinfo missing"
+[ -f "$APP/bo2ioscs/GameData/validation_map.json" ] || fail "normalized map missing"
+[ -f "$APP/bo2ioscs/GameData/TestData/readable_asset_manifest.json" ] || fail "readable asset manifest missing"
 
 EXEC_TYPE="$(file "$APP/xash")"
 # `file` describes thin binaries as "Mach-O 64-bit executable arm64" and may
@@ -52,7 +54,9 @@ cat > "$REPORT" <<EOF
 - architecture slices: $ARCHS
 - bundled dylibs: $DYLIB_COUNT
 - SDL2 framework: present
-- bootstrap gameinfo: present
+- gameinfo: present
+- normalized GameData map: present
+- readable asset manifest: present
 - proprietary PS3 source-like files: absent
 - app bytes (approx): $APP_BYTES
 EOF

@@ -38,6 +38,10 @@ xcrun simctl shutdown all >/dev/null 2>&1 || true
 xcrun simctl boot "$UDID" >/dev/null 2>&1 || true
 xcrun simctl bootstatus "$UDID" -b
 
+[ -f "$APP/bo2ioscs/GameData/TestData/readable_asset_manifest.json" ] || {
+  echo "Readable asset manifest missing from Xash simulator app" >&2
+  exit 4
+}
 xcrun simctl install "$UDID" "$APP" > "$LOGDIR/install.log" 2>&1
 
 (
@@ -88,7 +92,8 @@ cat > "$REPORT" <<EOF
 - engine/filesystem marker: $ENGINE_MARKER
 - screenshot: $LOGDIR/xash-simulator.png
 - logs: $LOGDIR/xash.log
-- scope: verifies native Xash iOS startup only; converted BO2 gameplay is not present yet
+- packaged readable asset manifest: present
+- scope: verifies native Xash iOS startup plus safe GameData/manifest packaging; full converted BO2 gameplay is not present yet
 EOF
 
 echo "$STATUS"

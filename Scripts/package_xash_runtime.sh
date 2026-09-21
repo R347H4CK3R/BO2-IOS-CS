@@ -98,16 +98,17 @@ codesign --force --sign - --timestamp=none "$APP"
 if [ "$MODE" = "device" ]; then
   (
     cd "$OUT"
-    zip -qry BO2IOSCS-Xash-bootstrap.ipa Payload
+    zip -qry BO2IOSCS-Xash-integrated.ipa Payload
   )
 
-  IPA="$OUT/BO2IOSCS-Xash-bootstrap.ipa"
+  IPA="$OUT/BO2IOSCS-Xash-integrated.ipa"
   [ -s "$IPA" ] || { echo "Xash bootstrap IPA was not produced"; exit 5; }
 
   zipinfo -1 "$IPA" > "$OUT/IPA_CONTENTS.txt"
   grep -qx 'Payload/BO2IOSCS.app/xash' "$OUT/IPA_CONTENTS.txt"
   grep -qx 'Payload/BO2IOSCS.app/bo2ioscs/gameinfo.txt' "$OUT/IPA_CONTENTS.txt"
   grep -qx 'Payload/BO2IOSCS.app/bo2ioscs/GameData/validation_map.json' "$OUT/IPA_CONTENTS.txt"
+  grep -qx 'Payload/BO2IOSCS.app/bo2ioscs/GameData/TestData/readable_asset_manifest.json' "$OUT/IPA_CONTENTS.txt"
   grep -qx 'Payload/BO2IOSCS.app/SDL2.framework/SDL2' "$OUT/IPA_CONTENTS.txt"
 
   cat > "$OUT/XASH_RUNTIME_REPORT.md" <<REPORT
@@ -120,7 +121,8 @@ if [ "$MODE" = "device" ]; then
 - game directory: bo2ioscs
 - proprietary assets included: no
 - signing: ad-hoc (intended for later sideload/re-sign workflow)
-- gameplay content: project GameData is integrated into the Xash app bundle; converted BO2 map/game DLL content is included only when legally generated inputs are supplied
+- gameplay content: project GameData and the safe readable-asset manifest are integrated into the Xash app bundle
+- converted BO2 content: included only when legally generated/decrypted or structurally readable inputs are supplied
 REPORT
 
   echo "Created $IPA"

@@ -90,14 +90,14 @@ jobs:
         run: |
           chmod +x Scripts/build_xash_ios.sh
           ./Scripts/build_xash_ios.sh device
-      - name: Package Xash bootstrap runtime IPA
+      - name: Package integrated Xash runtime IPA
         run: |
           chmod +x Scripts/package_xash_runtime.sh
           ./Scripts/package_xash_runtime.sh
-      - name: Validate Xash bootstrap runtime IPA
+      - name: Validate integrated Xash runtime IPA
         run: |
           chmod +x Tools/validate_xash_ipa.sh
-          ./Tools/validate_xash_ipa.sh Build/XashRuntime/BO2IOSCS-Xash-bootstrap.ipa Build/XashRuntime/XASH_IPA_VALIDATION_REPORT.md
+          ./Tools/validate_xash_ipa.sh Build/XashRuntime/BO2IOSCS-Xash-integrated.ipa Build/XashRuntime/XASH_IPA_VALIDATION_REPORT.md
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -109,7 +109,7 @@ jobs:
         with:
           name: BO2IOSCS-Xash-integrated-IPA
           path: |
-            Build/XashRuntime/BO2IOSCS-Xash-bootstrap.ipa
+            Build/XashRuntime/BO2IOSCS-Xash-integrated.ipa
             Build/XashRuntime/XASH_RUNTIME_REPORT.md
             Build/XashRuntime/XASH_IPA_VALIDATION_REPORT.md
           if-no-files-found: warn
