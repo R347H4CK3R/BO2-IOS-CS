@@ -173,6 +173,10 @@ final class MatchSimulation {
     private(set) var objectiveTicks = 0
     private(set) var objectiveState: ObjectiveState = .idle
     private(set) var eliminations = 0
+    private(set) var playerShotsFired = 0
+    private(set) var playerHits = 0
+    private(set) var playerEliminations = 0
+    var playerCombatIntegrated: Bool { playerShotsFired > 0 && playerHits > 0 }
     private(set) var objectiveElapsed: TimeInterval = 0
     private var botCombatAccumulator: TimeInterval = 0
     let bots: [BotState]
@@ -195,6 +199,23 @@ final class MatchSimulation {
         if bots[targetID].health == 0 {
             bots[targetID].deaths += 1
             eliminations += 1
+            resolveEliminationRoundIfNeeded()
+        }
+        return true
+    }
+
+    @discardableResult
+    func playerFire(weapon: WeaponDefinition, at targetID: Int) -> Bool {
+        playerShotsFired += 1
+        guard bots.indices.contains(targetID), bots[targetID].alive else { return false }
+        let wasAlive = bots[targetID].alive
+        bots[targetID].health = max(0, bots[targetID].health - Int(weapon.damage.rounded()))
+        playerHits += 1
+        shotsFired += 1
+        if wasAlive && !bots[targetID].alive {
+            bots[targetID].deaths += 1
+            eliminations += 1
+            playerEliminations += 1
             resolveEliminationRoundIfNeeded()
         }
         return true
