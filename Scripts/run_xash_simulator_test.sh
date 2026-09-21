@@ -94,7 +94,7 @@ if grep -q 'BO2IOSCS_GAMEDATA_CONFIG_LOADED' "$LOGDIR/xash.log" "$LOGDIR/xash-li
 fi
 
 STATUS=FAIL
-if [ "$AUTOTEST_MARKER" -eq 1 ] && [ "$ENGINE_MARKER" -eq 1 ] && [ "$GAMEDATA_CONFIG_MARKER" -eq 1 ]; then
+if [ "$AUTOTEST_MARKER" -eq 1 ] && [ "$ENGINE_MARKER" -eq 1 ] && [ "$RUNTIME_METADATA_MARKER" -eq 1 ]; then
   STATUS=PASS
 fi
 
@@ -107,7 +107,7 @@ cat > "$REPORT" <<EOF
 - noninteractive iOS launch marker: $AUTOTEST_MARKER
 - engine/filesystem marker: $ENGINE_MARKER
 - runtime metadata execution marker: $RUNTIME_METADATA_MARKER
-- GameData runtime-config marker: $GAMEDATA_CONFIG_MARKER
+- secondary GameData runtime-config marker: $GAMEDATA_CONFIG_MARKER (informational only)
 - screenshot: $LOGDIR/xash-simulator.png
 - logs: $LOGDIR/xash.log
 - packaged readable asset manifest: present
