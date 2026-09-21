@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-import argparse, hashlib, json, re, struct
+import argparse, hashlib, json, re, shutil, struct
 from pathlib import Path
 from fastfile import parse_fastfile_header
 from ipak import DATA_HASH_MASK, IPakFile
@@ -13,6 +13,7 @@ SIGNATURES = {
 TEXTURE_FORMATS = {"BC1", "BC2", "BC3", "BC4", "BC5", "RGBA8", "BGRA8", "UNKNOWN"}
 TEXTURE_LAYOUTS = {"linear", "ps3_tiled", "ps3_swizzled", "unknown"}
 HASH_RE = re.compile(r"^0x[0-9A-Fa-f]{8}$")
+READABLE_IMPORT_EXTENSIONS = {".wav", ".ogg", ".png", ".dds", ".tga", ".jpg", ".jpeg", ".obj", ".json", ".cfg", ".txt", ".gsc"}
 
 def detect(path: Path):
     head = path.read_bytes()[:16]
@@ -122,17 +123,56 @@ def extract_ipak_payloads(source: Path, output: Path, texture_metadata=None, gen
     report_path.write_text(json.dumps({"schema": "bo2ioscs-texture-payload-inventory-v1", "records": records}, indent=2))
     return records
 
+def import_readable_assets(source: Path, output: Path):
+    """Copy only structurally readable assets into local GeneratedGameData.
+
+    This path intentionally excludes BO2 fastfiles/IPAK containers and performs no
+    decryption. It preserves relative paths and records provenance/integrity data.
+    """
+    root = output / "GeneratedGameData" / "ImportedAssets"
+    root.mkdir(parents=True, exist_ok=True)
+    records = []
+    for p in sorted(source.rglob("*")):
+        if not p.is_file() or p.is_symlink() or p.suffix.lower() not in READABLE_IMPORT_EXTENSIONS:
+            continue
+        rel = p.relative_to(source)
+        destination = root / rel
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(p, destination)
+        fmt, cls = detect(p)
+        records.append({
+            "original_path": str(rel),
+            "generated_output_path": str(destination.relative_to(output)),
+            "detected_format": fmt,
+            "asset_class": cls,
+            "size": p.stat().st_size,
+            "sha256": hashlib.sha256(p.read_bytes()).hexdigest(),
+            "status": "imported_readable_asset"
+        })
+    manifest = {
+        "schema": "bo2ioscs-readable-asset-manifest-v1",
+        "policy": "structurally readable inputs only; no BO2 fastfile decryption",
+        "records": records
+    }
+    manifest_path = output / "GeneratedGameData" / "readable_asset_manifest.json"
+    manifest_path.write_text(json.dumps(manifest, indent=2))
+    return records
+
+
 def main():
     parser = argparse.ArgumentParser(); parser.add_argument("--source", required=True); parser.add_argument("--output", required=True)
     parser.add_argument("--extract-ipak", action="store_true", help="Decode IPAK image payloads into GameDataIntermediate/TexturePayloads")
     parser.add_argument("--texture-metadata", help="Authoritative bo2ioscs-texture-metadata-v1 JSON; used only to map decoded payloads, never to infer missing values")
     parser.add_argument("--generate-runtime-textures", action="store_true", help="Generate validated DDS/TGA runtime textures only for decoded IPAK payloads with authoritative metadata")
+    parser.add_argument("--import-readable-assets", action="store_true", help="Copy only structurally readable assets into GeneratedGameData with provenance metadata; never decrypts BO2 fastfiles")
     args = parser.parse_args(); source, output = Path(args.source).expanduser().resolve(), Path(args.output).expanduser().resolve()
     if not source.is_dir(): raise SystemExit(f"source directory not found: {source}")
     if args.generate_runtime_textures and not args.extract_ipak: raise SystemExit("--generate-runtime-textures requires --extract-ipak")
     if args.generate_runtime_textures and not args.texture_metadata: raise SystemExit("--generate-runtime-textures requires --texture-metadata; metadata is never inferred")
     metadata = load_texture_metadata(Path(args.texture_metadata).expanduser().resolve()) if args.texture_metadata else None
     inventory = scan(source, output); result = {"status": "ok", "files": inventory["counts"]["total"]}
+    if args.import_readable_assets:
+        imported = import_readable_assets(source, output); result["readable_assets_imported"] = len(imported)
     if args.extract_ipak:
         records = extract_ipak_payloads(source, output, metadata, args.generate_runtime_textures); result["ipak_payload_records"] = len(records); result["texture_metadata_matches"] = sum("texture_metadata" in r for r in records)
         result["runtime_textures_generated"] = sum(r.get("runtime_texture", {}).get("status") == "runtime_texture_generated" for r in records)

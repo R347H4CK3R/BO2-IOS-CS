@@ -1,6 +1,6 @@
 import json, tempfile, unittest
 from pathlib import Path
-from convert_assets import detect, endian_probe, load_texture_metadata, scan
+from convert_assets import detect, endian_probe, import_readable_assets, load_texture_metadata, scan
 from runtime_texture import expected_payload_size, write_runtime_texture, unswizzle_morton, _morton2
 
 class ConverterTests(unittest.TestCase):
@@ -16,6 +16,22 @@ class ConverterTests(unittest.TestCase):
             inv = scan(src, out)
             self.assertEqual(inv["files"][0]["conversion_status"], "unsupported")
             self.assertTrue((out / "asset_inventory.json").exists())
+
+    def test_readable_asset_import_excludes_fastfiles(self):
+        with tempfile.TemporaryDirectory() as d:
+            src, out = Path(d) / "src", Path(d) / "out"
+            src.mkdir()
+            (src / "audio.wav").write_bytes(b"RIFF" + b"\0" * 12)
+            (src / "image.png").write_bytes(b"\x89PNG" + b"\0" * 12)
+            (src / "encrypted.ff").write_bytes(b"TAff0100" + b"\0" * 32)
+            records = import_readable_assets(src, out)
+            self.assertEqual(len(records), 2)
+            self.assertTrue((out / "GeneratedGameData" / "ImportedAssets" / "audio.wav").exists())
+            self.assertTrue((out / "GeneratedGameData" / "ImportedAssets" / "image.png").exists())
+            self.assertFalse((out / "GeneratedGameData" / "ImportedAssets" / "encrypted.ff").exists())
+            manifest = json.loads((out / "GeneratedGameData" / "readable_asset_manifest.json").read_text())
+            self.assertEqual(manifest["schema"], "bo2ioscs-readable-asset-manifest-v1")
+            self.assertIn("no BO2 fastfile decryption", manifest["policy"])
 
     def test_texture_metadata_requires_authoritative_fields(self):
         with tempfile.TemporaryDirectory() as d:
