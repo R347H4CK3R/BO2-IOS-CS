@@ -151,6 +151,9 @@ final class GameViewController: UIViewController, SCNSceneRendererDelegate {
         let dt = lastTime == 0 ? 1.0/60.0 : min(0.05, time - lastTime)
         lastTime = time
         sim.tick(dt: dt)
+        if let weapon = weaponState?.definition {
+            sim.botCombatTick(dt: dt, weapon: weapon)
+        }
         weaponState?.tick(dt: dt)
         updatePlayer(dt: dt)
         frameCount += 1
@@ -176,6 +179,8 @@ final class GameViewController: UIViewController, SCNSceneRendererDelegate {
                 "touch_ui_initialized": true,
                 "touch_movement_ready": playerCamera != nil,
                 "touch_look_ready": playerCamera != nil,
+                "bot_combat_active": sim.eliminations > 0 || sim.shotsFired > 0,
+                "eliminations": sim.eliminations,
                 "normalized_map_loaded": loadedMapName != "none",
                 "loaded_map": loadedMapName,
                 "weapon_definitions_loaded": loadedWeaponCount,
