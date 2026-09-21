@@ -13,9 +13,9 @@
     "PS3 tiled layouts and swizzle variants other than explicitly-authoritative Morton2D remain unsupported; the converter intentionally does not infer layout metadata or padding."
   ],
   "last_successful_build": {
-    "workflow_run": 35552729738,
-    "run_number": 91,
-    "commit": "f696a4d20f8936bf3b6b48c56d49e7f9578edd0c"
+    "workflow_run": "35554316862",
+    "run_number": 96,
+    "commit": "4602bd0f5eef78174f890a41cd782ad2a8688c97"
   },
   "simulator_test_status": "PASS - normalized GameData map/weapon loading, touch movement/aim, ammo/reload runtime state, objective flow, deterministic bot combat, and the readable-asset converter batch are CI validated; app simulator autotest and pinned Xash3D FWGS simulator startup test pass",
   "device_build_status": "PASS - unsigned ARM64 app build and pinned Xash3D FWGS ARM64 device engine build",
@@ -24,9 +24,10 @@
   "xash_runtime_status": "PASS - run #91 validates Xash3D FWGS startup and execution of generated runtime metadata derived from safe normalized GameData; player combat integration is now queued for CI validation.",
   "asset_scanner_status": "PASS - BO2 fastfile headers and PS3 IPAK containers recognized; encrypted fastfile payloads remain intentionally unsupported; IPAK LZO payload extraction with CRC validation; authoritative texture metadata mapping; strict runtime texture generation; explicit metadata-gated Morton2D PS3 swizzle conversion; authoritative IPAK-to-runtime-texture generation validated in run #80; structurally readable asset import with path preservation and SHA-256 provenance validated in run #85 while encrypted .ff inputs remain excluded",
   "next_work": [
-    "CI-validate player FIRE -> hit selection -> weapon damage -> bot health/death -> round progression with rendered bot state synchronized to simulation.",
-    "Add project-owned executable Xash gameplay/map content so the integrated Xash IPA advances from engine startup to an actual playable synthetic match.",
-    "Accept only user-provided legally decrypted/normalized fastfile zone data or structurally readable assets for real-content conversion; never bypass BO2 fastfile encryption.",
-    "Perform final ARM64 IPA consolidation and physical iPhone installation/runtime validation once device-side testing is available."
-  ]
+    "Add project-owned executable Xash gameplay/map content so the integrated Xash IPA advances from engine/runtime-metadata startup to an actual playable synthetic match.",
+    "CI-validate Xash player spawn, movement, weapon fire, target damage/death, and match/round reset using only project-owned synthetic content.",
+    "Only accept legally decrypted/normalized fastfile zone data or structurally readable assets; never bypass encryption.",
+    "Consolidate the final ARM64 IPA and perform physical iPhone validation once available."
+  ],
+  "simulator_status": "PASS - run #96 validates normalized GameData loading, touch movement/aim, ammo/reload, objective flow, deterministic bot combat, and CI-gated player FIRE -> weapon damage -> bot health/death/elimination with rendered bot state synchronization."
 }
