@@ -24,6 +24,11 @@ final class GameViewController: UIViewController, SCNSceneRendererDelegate {
 
     override func viewDidLoad() {
         super.viewDidLoad()
+        if let generated = GeneratedGameDataLoader.loadBuildManifest() {
+            RuntimeLog.stage("GENERATED_GAMEDATA_READY_\(generated.runtime_ready_count)")
+        } else {
+            RuntimeLog.stage("GENERATED_GAMEDATA_MANIFEST_NOT_BUNDLED")
+        }
         autotest = CommandLine.arguments.contains("AUTOTEST") || ProcessInfo.processInfo.environment["AUTOTEST"] == "1"
         RuntimeLog.stage("FILESYSTEM_INIT")
         setupScene()
