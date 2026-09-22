@@ -3,26 +3,42 @@
   "completed_phases": [1, 2, 3, 4],
   "failed_tests": [],
   "known_blockers": [
-    "The user-owned PS3 BO2 .ff fastfiles are authenticated/encrypted TAff0100 containers. This project intentionally does not bypass that encryption; payload conversion requires user-provided legally decrypted/normalized fastfile data.",
+    "288 user-owned PS3 BO2 .ff fastfiles are authenticated/encrypted TAff0100 containers and remain intentionally excluded until legally decrypted/normalized input exists.",
+    "243 IPAK and 240 SABS containers require validated conversion before their payloads can enter runtime GameData.",
+    "351 video assets require runtime compatibility/transcode validation.",
     "Physical iPhone installation/runtime validation has not yet been performed.",
     "PS3 tiled layouts and swizzle variants other than explicitly-authoritative Morton2D remain unsupported; the converter intentionally does not infer layout metadata or padding."
   ],
-  "last_successful_build": {
-    "workflow_run": "35602085149",
-    "run_number": 115,
-    "commit": "6c1527404c226187d1a235c3b40f4e41056f76d8"
+  "private_gamedata_checkpoint": {
+    "stage4_run": "35688670168",
+    "runtime_ready_count": 153,
+    "error_count": 0,
+    "deferred": {
+      "encrypted_fastfile": 288,
+      "ipak_pending_conversion": 243,
+      "sabs_pending_conversion": 240,
+      "video_pending_runtime_conversion": 351,
+      "unsupported_pending_parser": 10,
+      "sce_self": 3,
+      "elf_analysis_only": 3
+    }
   },
-  "simulator_test_status": "PASS - run #115 is fully green after hardened simulator autotest launch polling and validates the current normalized player/objective runtime integration.",
-  "device_build_status": "PASS - run #115 produced the unsigned ARM64 app and pinned Xash3D FWGS ARM64 device engine artifacts.",
-  "ipa_validation_status": "PASS - run #115 produced both BO2IOSCS-unsigned-IPA and BO2IOSCS-Xash-integrated-IPA artifacts while proprietary PS3 source-like files remain excluded.",
+  "last_successful_build": {
+    "workflow_run": "35606526576",
+    "run_number": 116,
+    "commit": "86943a47d5dacc9182813cbb473237b92aeb64db"
+  },
+  "simulator_test_status": "PASS - run #116 is fully green and validates the current normalized player/objective runtime integration.",
+  "device_build_status": "PASS - run #116 produced the unsigned ARM64 app and pinned Xash3D FWGS ARM64 device engine artifacts.",
+  "ipa_validation_status": "PASS - run #116 produced the unsigned IPA release candidate while proprietary PS3 source-like files remain excluded.",
   "ipa_path": "Build/BO2IOSCS-unsigned.ipa",
-  "xash_runtime_status": "PASS - run #115 produced Xash simulator runtime results and validated Xash3D FWGS simulator/runtime startup.",
-  "asset_scanner_status": "PASS - BO2 fastfile headers and PS3 IPAK containers recognized; encrypted fastfile payloads remain intentionally unsupported; authoritative metadata and structurally readable asset paths remain the supported conversion route.",
+  "xash_runtime_status": "PASS - run #116 validated Xash3D FWGS simulator/runtime startup.",
+  "asset_scanner_status": "PASS - private Stages 2-4 completed; 153 structurally readable runtime candidates identified with zero Stage 4 read errors.",
   "next_work": [
-    "Validate complete objective round transitions in simulator CI using live normalized player position.",
-    "Consolidate the final unsigned ARM64 IPA release candidate from the fully-green gameplay/runtime baseline.",
-    "Only accept legally decrypted/normalized fastfile zone data or structurally readable assets; never bypass encryption.",
-    "Perform physical iPhone installation/runtime validation once the IPA is available to the user."
+    "Integrate only distributable/generated runtime data into the iOS runtime; keep private source assets local.",
+    "Implement and validate IPAK/SABS/video conversion paths before marking full BO2 content integration complete.",
+    "Re-run simulator and ARM64 release validation after repository-side runtime changes.",
+    "Perform physical iPhone installation/runtime validation after automated release validation."
   ],
-  "simulator_status": "PASS - run #115 is fully green with hardened launch polling and current gameplay/runtime integration validated."
+  "simulator_status": "PASS - run #116 is the current fully-green software baseline."
 }
