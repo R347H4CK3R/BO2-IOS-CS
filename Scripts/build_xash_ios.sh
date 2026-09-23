@@ -90,11 +90,11 @@ replacement = """void IOS_LaunchDialog( void )
 	const char *autotest = getenv( "BO2IOSCS_AUTOTEST" );
 	if( !autotest || autotest[0] == '1' )
 	{
-		const char *testargs[] = { "xash", "-dev", "2", "-log", "-console", "+exec", "bo2ioscs_runtime.cfg" };
+		const char *testargs[] = { "xash", "-dev", "2", "-log", "-console", "-game", "bo2ioscs", "-nosound", "+exec", "bo2ioscs_runtime.cfg" };
 		const int count = (int)( sizeof( testargs ) / sizeof( testargs[0] ) );
 
 		[[NSFileManager defaultManager]
-			changeCurrentDirectoryPath:[NSString stringWithUTF8String:IOS_GetDocsDir()]];
+			changeCurrentDirectoryPath:[[NSBundle mainBundle] bundlePath]];
 
 		szArgc = count;
 		szArgv = calloc( count + 1, sizeof( char * ) );
@@ -108,6 +108,20 @@ replacement = """void IOS_LaunchDialog( void )
 if needle not in text:
     raise SystemExit("Xash iOS launchdialog patch anchor not found")
 path.write_text(text.replace(needle, replacement, 1))
+PY
+
+# This bootstrap does not use voice capture. Do not request microphone access and
+# keep the app audio session ambient so opening it does not duck the user's music.
+python3 - "$XASH/engine/platform/ios/launchdialog.m" <<'PY'
+from pathlib import Path
+import sys
+p=Path(sys.argv[1])
+s=p.read_text()
+s=s.replace('[[AVAudioSession sharedInstance] requestRecordPermission:^(BOOL granted){}];',
+'''AVAudioSession *session = [AVAudioSession sharedInstance];
+	[session setCategory:AVAudioSessionCategoryAmbient error:nil];
+	[session setActive:YES error:nil];''')
+p.write_text(s)
 PY
 
 build_hlsdk() {
