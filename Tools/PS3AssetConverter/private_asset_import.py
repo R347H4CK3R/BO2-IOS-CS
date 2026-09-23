@@ -115,7 +115,7 @@ def main() -> int:
         "schema": "bo2ioscs-generated-gamedata-v1",
         "generated_directory": "GeneratedGameData",
         "private_source_embedded": False,
-        "generated_outputs_ready_for_packaging": True,
+        "generated_outputs_ready_for_packaging": True,\n        "encrypted_fastfiles_excluded": len(blocked),
         "input_manifest": "PRIVATE_IMPORT_MANIFEST.json",
     }
     (output / "BUILD_MANIFEST.json").write_text(json.dumps(build_manifest, indent=2) + "\n")
