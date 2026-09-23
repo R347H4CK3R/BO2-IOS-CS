@@ -19,6 +19,15 @@ fail() {
 [ -f "$APP/Info.plist" ] || fail "Info.plist missing"
 [ -f "$APP/SDL2.framework/SDL2" ] || fail "SDL2.framework missing"
 [ -f "$APP/bo2ioscs/gameinfo.txt" ] || fail "gameinfo missing"
+[ -f "$APP/bo2ioscs/gfx.wad" ] || fail "standalone gfx.wad missing"
+python3 - "$APP/bo2ioscs/gfx.wad" <<'PY' || fail "standalone gfx.wad is invalid"
+import struct, sys
+from pathlib import Path
+b = Path(sys.argv[1]).read_bytes()
+assert len(b) >= 12 and b[:4] == b"WAD3"
+count, directory = struct.unpack("<ii", b[4:12])
+assert count >= 0 and 12 <= directory <= len(b)
+PY
 [ -f "$APP/bo2ioscs/autoexec.cfg" ] || fail "generated runtime config missing"
 grep -q 'BO2IOSCS_GAMEDATA_CONFIG_LOADED' "$APP/bo2ioscs/autoexec.cfg" || fail "runtime config marker missing"
 [ -f "$APP/bo2ioscs/GameData/validation_map.json" ] || fail "normalized map missing"
