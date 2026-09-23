@@ -55,6 +55,21 @@ clone_pinned https://github.com/libsdl-org/SDL.git "$SDL" "$SDL2_SHA"
 clone_pinned https://github.com/FWGS/xash3d-fwgs.git "$XASH" "$XASH_SHA"
 git -C "$XASH" submodule update --init --recursive --depth=1
 
+# iOS starts Xash in its writable Documents directory. Our standalone game data
+# is bundled read-only inside the .app, so make the engine mount that bundle as
+# its read-only root instead of searching Documents for bo2ioscs/gfx.wad.
+python3 - "$XASH/engine/platform/ios/launchdialog.m" <<'PY'
+from pathlib import Path
+import sys
+p = Path(sys.argv[1])
+s = p.read_text()
+needle = 'void IOS_LaunchDialog( void )\n{\n'
+replacement = '''void IOS_LaunchDialog( void )\n{\n\tNSString *bundleRoot = [[NSBundle mainBundle] bundlePath];\n\tif( bundleRoot )\n\t{\n\t\tsetenv( "XASH3D_RODIR", [bundleRoot fileSystemRepresentation], 1 );\n\t\tsetenv( "XASH3D_GAME", "bo2ioscs", 1 );\n\t\tNSLog( @"BO2IOSCS bundle game root: %@", bundleRoot );\n\t}\n'''
+if needle not in s:
+    raise SystemExit("Xash iOS launchdialog root patch anchor not found")
+p.write_text(s.replace(needle, replacement, 1))
+PY
+
 # Preserve normal Xash iOS behavior, but add a project-only automation path
 # for Simulator CI so the native UIAlert launch dialog does not block simctl.
 python3 - "$XASH/engine/platform/ios/launchdialog.m" <<'PY'
