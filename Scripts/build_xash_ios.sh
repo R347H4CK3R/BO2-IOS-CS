@@ -123,7 +123,7 @@ build_hlsdk() {
     -DCMAKE_OSX_SYSROOT="$sdk" \
     -DCMAKE_OSX_ARCHITECTURES=arm64 \
     -DCMAKE_OSX_DEPLOYMENT_TARGET=17.0 \
-    -DCMAKE_BUILD_TYPE=Release \
+    -DCMAKE_BUILD_TYPE=RelWithDebInfo \
     -D64BIT=ON \
     -DGOLDSOURCE_SUPPORT=OFF \
     -DBUILD_CLIENT=ON \
@@ -132,7 +132,7 @@ build_hlsdk() {
 
   local client server
   client="$(find "$out" -type f -name 'client_ios_arm64.dylib' -print -quit)"
-  server="$(find "$out" -type f -name 'server_ios_arm64.dylib' -print -quit)"
+  server="$(find "$out" -type f \( -name 'hl_ios_arm64.dylib' -o -name 'server_ios_arm64.dylib' \) -print -quit)"
   [ -n "$client" ] || { echo "HLSDK iOS client library was not produced"; find "$out" -name '*.dylib' -print; exit 6; }
   [ -n "$server" ] || { echo "HLSDK iOS server library was not produced"; find "$out" -name '*.dylib' -print; exit 7; }
   cp "$client" "$gamelibs/cl_dlls/client_ios_arm64.dylib"
