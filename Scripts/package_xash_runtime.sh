@@ -38,6 +38,33 @@ mkdir -p "$APP"
 cp -R "$SDL_FRAMEWORK" "$APP/SDL2.framework"
 mkdir -p "$APP/bo2ioscs"
 cp -R "$ROOT/GameData/XashBootstrap/bo2ioscs/." "$APP/bo2ioscs/"
+mkdir -p "$APP/bo2ioscs/resource"
+cat > "$APP/bo2ioscs/resource/GameMenu.res" <<'MENU'
+"GameMenu"
+{
+  "1" { "label" "New Game" "command" "OpenNewGameDialog" }
+  "2" { "label" "Multiplayer" "command" "OpenServerBrowser" }
+  "3" { "label" "Options" "command" "OpenOptionsDialog" }
+  "4" { "label" "Console" "command" "engine toggleconsole" }
+  "5" { "label" "Quit" "command" "Quit" }
+}
+MENU
+cat > "$APP/bo2ioscs/resource/bo2ioscs_english.txt" <<'LANG'
+"lang"
+{
+  "Language" "English"
+  "Tokens"
+  {
+    "GameUI_Console" "Console"
+    "GameUI_NewGame" "New Game"
+    "GameUI_Options" "Options"
+    "GameUI_LoadGame" "Load Game"
+    "GameUI_Multiplayer" "Multiplayer"
+    "GameUI_GameMenu_Quit" "Quit"
+    "GameUI_QuitConfirmationText" "Quit BO2 iOS CS?"
+  }
+}
+LANG
 
 # Xash/HLSDK delta initialization requires delta.lst in the active game search
 # path. The standalone package cannot rely on proprietary Half-Life game data,
