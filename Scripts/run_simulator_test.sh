@@ -46,9 +46,13 @@ fi
 # Hosted runners can take several seconds after install before the data
 # container becomes queryable. Resolve it during polling instead of only once.
 DATA=""
-SIMCTL_CHILD_AUTOTEST=1 xcrun simctl launch --terminate-running-process "$UDID" "$BUNDLE" --autotest > Build/RuntimeLogs/launch.log 2>&1 &
+launch_app() {
+  SIMCTL_CHILD_AUTOTEST=1 xcrun simctl launch --terminate-running-process "$UDID" "$BUNDLE" --autotest >> Build/RuntimeLogs/launch.log 2>&1 || true
+}
+: > Build/RuntimeLogs/launch.log
+launch_app &
 LAUNCH_PID=$!
-for _ in $(seq 1 90); do
+for i in $(seq 1 180); do
   if [ -z "$DATA" ]; then
     DATA="$(xcrun simctl get_app_container "$UDID" "$BUNDLE" data 2>/dev/null || true)"
   fi
@@ -65,12 +69,11 @@ for _ in $(seq 1 90); do
       # Retry once after the simulator settles, then keep polling for the
       # in-app result instead of failing solely on the simctl client.
       sleep 3
-      SIMCTL_CHILD_AUTOTEST=1 xcrun simctl launch --terminate-running-process "$UDID" "$BUNDLE" --autotest >> Build/RuntimeLogs/launch.log 2>&1 &
+      launch_app &
       LAUNCH_PID=$!
     fi
   fi
-  sleep 1
-done
+  # Retry periodically if LaunchServices accepted the install but did not start the app.\n  if [ $((i % 15)) -eq 0 ]; then\n    launch_app &\n    LAUNCH_PID=$!\n  fi\n  sleep 1\ndone
 if kill -0 "$LAUNCH_PID" 2>/dev/null; then
   kill "$LAUNCH_PID" >/dev/null 2>&1 || true
   wait "$LAUNCH_PID" 2>/dev/null || true
