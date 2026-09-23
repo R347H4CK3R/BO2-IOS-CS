@@ -73,7 +73,13 @@ for i in $(seq 1 180); do
       LAUNCH_PID=$!
     fi
   fi
-  # Retry periodically if LaunchServices accepted the install but did not start the app.\n  if [ $((i % 15)) -eq 0 ]; then\n    launch_app &\n    LAUNCH_PID=$!\n  fi\n  sleep 1\ndone
+  # Retry periodically if LaunchServices accepted the install but did not start the app.
+  if [ $((i % 15)) -eq 0 ]; then
+    launch_app &
+    LAUNCH_PID=$!
+  fi
+  sleep 1
+done
 if kill -0 "$LAUNCH_PID" 2>/dev/null; then
   kill "$LAUNCH_PID" >/dev/null 2>&1 || true
   wait "$LAUNCH_PID" 2>/dev/null || true
