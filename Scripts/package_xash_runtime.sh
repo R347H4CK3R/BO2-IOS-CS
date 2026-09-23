@@ -39,6 +39,14 @@ cp -R "$SDL_FRAMEWORK" "$APP/SDL2.framework"
 mkdir -p "$APP/bo2ioscs"
 cp -R "$ROOT/GameData/XashBootstrap/bo2ioscs/." "$APP/bo2ioscs/"
 
+# Xash requires a native game client before it can leave the initialized renderer.
+# Package the open-source HLSDK modules built for the same iOS target.
+[ -f "$ENGINE_BUILD/GameLibs/cl_dlls/client_ios_arm64.dylib" ] || { echo "Missing iOS client module"; exit 6; }
+[ -f "$ENGINE_BUILD/GameLibs/dlls/server_ios_arm64.dylib" ] || { echo "Missing iOS server module"; exit 7; }
+mkdir -p "$APP/bo2ioscs/cl_dlls" "$APP/bo2ioscs/dlls"
+cp "$ENGINE_BUILD/GameLibs/cl_dlls/client_ios_arm64.dylib" "$APP/bo2ioscs/cl_dlls/"
+cp "$ENGINE_BUILD/GameLibs/dlls/server_ios_arm64.dylib" "$APP/bo2ioscs/dlls/"
+
 # Host_InitCommon does not merely require a file named gfx.wad: it checks for
 # the virtual resource gfx/conchars. Generate a project-owned WAD3 containing
 # that exact 256x64 raw console-font lump so standalone Xash can initialize
@@ -196,6 +204,8 @@ if [ "$MODE" = "device" ]; then
   grep -qx 'Payload/BO2IOSCS.app/bo2ioscs/GameData/TestData/readable_asset_manifest.json' "$OUT/IPA_CONTENTS.txt"
   grep -qx 'Payload/BO2IOSCS.app/bo2ioscs/bo2ioscs_runtime.cfg' "$OUT/IPA_CONTENTS.txt"
   grep -qx 'Payload/BO2IOSCS.app/SDL2.framework/SDL2' "$OUT/IPA_CONTENTS.txt"
+  grep -qx 'Payload/BO2IOSCS.app/bo2ioscs/cl_dlls/client_ios_arm64.dylib' "$OUT/IPA_CONTENTS.txt"
+  grep -qx 'Payload/BO2IOSCS.app/bo2ioscs/dlls/server_ios_arm64.dylib' "$OUT/IPA_CONTENTS.txt"
 
   cat > "$OUT/XASH_RUNTIME_REPORT.md" <<REPORT
 # Xash runtime package
