@@ -38,6 +38,19 @@ mkdir -p "$APP"
 cp -R "$SDL_FRAMEWORK" "$APP/SDL2.framework"
 mkdir -p "$APP/bo2ioscs"
 cp -R "$ROOT/GameData/XashBootstrap/bo2ioscs/." "$APP/bo2ioscs/"
+
+# Xash Host_InitCommon requires gfx.wad even for a standalone game. Do not ship
+# Half-Life/Valve data: generate a project-owned, structurally valid empty WAD3
+# container. BO2IOSCS supplies its own runtime/UI resources separately.
+python3 - "$APP/bo2ioscs/gfx.wad" <<'PY'
+import struct, sys
+from pathlib import Path
+out = Path(sys.argv[1])
+# WAD3 header: magic, lump count, directory offset. An empty directory at EOF
+# is valid and is sufficient for Xash to mount the WAD without proprietary data.
+out.write_bytes(b"WAD3" + struct.pack("<ii", 0, 12))
+assert out.read_bytes() == b"WAD3" + struct.pack("<ii", 0, 12)
+PY
 # Integrate project-owned/generated GameData directly into the primary Xash package.
 # Proprietary source dumps remain excluded; only committed safe data and optional
 # locally generated runtime data are copied.
