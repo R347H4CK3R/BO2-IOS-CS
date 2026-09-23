@@ -1,11 +1,12 @@
-// Project-owned bootstrap metadata for the Xash3D runtime smoke test.
-title "BO2 iOS CS Bootstrap"
+// Project-owned bootstrap metadata for the standalone Xash3D runtime.
+title "BO2 iOS CS"
 gamedir bo2ioscs
 basedir bo2ioscs
 type "Development"
-gamemode multiplayer_only
+gamemode singleplayer_only
 version 0.1
 startmap bootstrap
+trainmap bootstrap
 mp_filter bootstrap
 max_edicts 1024
 render_picbutton_text 1
