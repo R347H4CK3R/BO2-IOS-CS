@@ -22,8 +22,12 @@ try {
   Save-State "media-convert" "running"
   & python "$Root\Tools\PS3AssetConverter\media_convert.py" --source $Source --output $Output
   if ($LASTEXITCODE -ne 0) { throw "media conversion failed ($LASTEXITCODE)" }
+  Save-State "validate-generated" "running"
+  & python "$Root\Tools\PS3AssetConverter\validate_generated.py" --root $Output
+  if ($LASTEXITCODE -ne 0) { throw "generated data validation failed ($LASTEXITCODE)" }
   Save-State "complete" "success"
   Write-Host "SUCCESS: $Output\GeneratedGameData"
+  Write-Host "Validation: $Output\GENERATED_VALIDATION.json"
 } catch {
   Save-State "failed" "error"
   throw
