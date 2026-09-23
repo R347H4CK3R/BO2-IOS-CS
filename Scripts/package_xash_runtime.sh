@@ -39,6 +39,40 @@ cp -R "$SDL_FRAMEWORK" "$APP/SDL2.framework"
 mkdir -p "$APP/bo2ioscs"
 cp -R "$ROOT/GameData/XashBootstrap/bo2ioscs/." "$APP/bo2ioscs/"
 
+# Xash/HLSDK delta initialization requires delta.lst in the active game search
+# path. The standalone package cannot rely on proprietary Half-Life game data,
+# so provide the canonical protocol field descriptions as project-owned text.
+cat > "$APP/bo2ioscs/delta.lst" <<'DELTA'
+clientdata_t none
+{
+	DEFINE_DELTA( flTimeStepSound, DT_FLOAT, 10, 1.0 ),
+	DEFINE_DELTA( flDuckTime, DT_FLOAT, 10, 1.0 ),
+	DEFINE_DELTA( flSwimTime, DT_FLOAT, 10, 1.0 ),
+	DEFINE_DELTA( waterjumptime, DT_FLOAT, 10, 1.0 ),
+	DEFINE_DELTA( origin[0], DT_SIGNED | DT_FLOAT, 21, 128.0 ),
+	DEFINE_DELTA( origin[1], DT_SIGNED | DT_FLOAT, 21, 128.0 ),
+	DEFINE_DELTA( origin[2], DT_SIGNED | DT_FLOAT, 21, 128.0 ),
+	DEFINE_DELTA( velocity[0], DT_SIGNED | DT_FLOAT, 16, 8.0 ),
+	DEFINE_DELTA( velocity[1], DT_SIGNED | DT_FLOAT, 16, 8.0 ),
+	DEFINE_DELTA( velocity[2], DT_SIGNED | DT_FLOAT, 16, 8.0 ),
+	DEFINE_DELTA( viewmodel, DT_INTEGER, 10, 1.0 ),
+	DEFINE_DELTA( punchangle[0], DT_SIGNED | DT_FLOAT, 16, 8.0 ),
+	DEFINE_DELTA( punchangle[1], DT_SIGNED | DT_FLOAT, 16, 8.0 ),
+	DEFINE_DELTA( punchangle[2], DT_SIGNED | DT_FLOAT, 16, 8.0 ),
+	DEFINE_DELTA( flags, DT_INTEGER, 32, 1.0 ),
+	DEFINE_DELTA( waterlevel, DT_INTEGER, 2, 1.0 ),
+	DEFINE_DELTA( watertype, DT_INTEGER, 4, 1.0 ),
+	DEFINE_DELTA( view_ofs[0], DT_SIGNED | DT_FLOAT, 10, 4.0 ),
+	DEFINE_DELTA( view_ofs[1], DT_SIGNED | DT_FLOAT, 10, 4.0 ),
+	DEFINE_DELTA( view_ofs[2], DT_SIGNED | DT_FLOAT, 10, 4.0 ),
+	DEFINE_DELTA( health, DT_FLOAT, 10, 1.0 ),
+	DEFINE_DELTA( bInDuck, DT_INTEGER, 1, 1.0 ),
+	DEFINE_DELTA( weapons, DT_INTEGER, 32, 1.0 ),
+	DEFINE_DELTA( flNextAttack, DT_FLOAT, 22, 1000.0 )
+}
+DELTA
+test -s "$APP/bo2ioscs/delta.lst" || { echo "delta.lst generation failed"; exit 8; }
+
 # Xash requires a native game client before it can leave the initialized renderer.
 # Package the open-source HLSDK modules built for the same iOS target.
 [ -f "$ENGINE_BUILD/GameLibs/cl_dlls/client_ios_arm64.dylib" ] || { echo "Missing iOS client module"; exit 6; }
@@ -199,6 +233,7 @@ if [ "$MODE" = "device" ]; then
   zipinfo -1 "$IPA" > "$OUT/IPA_CONTENTS.txt"
   grep -qx 'Payload/BO2IOSCS.app/xash' "$OUT/IPA_CONTENTS.txt"
   grep -qx 'Payload/BO2IOSCS.app/bo2ioscs/gameinfo.txt' "$OUT/IPA_CONTENTS.txt"
+  grep -qx 'Payload/BO2IOSCS.app/bo2ioscs/delta.lst' "$OUT/IPA_CONTENTS.txt"
   grep -qx 'Payload/BO2IOSCS.app/bo2ioscs/autoexec.cfg' "$OUT/IPA_CONTENTS.txt"
   grep -qx 'Payload/BO2IOSCS.app/bo2ioscs/GameData/validation_map.json' "$OUT/IPA_CONTENTS.txt"
   grep -qx 'Payload/BO2IOSCS.app/bo2ioscs/GameData/TestData/readable_asset_manifest.json' "$OUT/IPA_CONTENTS.txt"
