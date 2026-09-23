@@ -45,7 +45,7 @@ cp -R "$ROOT/GameData/XashBootstrap/bo2ioscs/." "$APP/bo2ioscs/"
 [ -f "$ENGINE_BUILD/GameLibs/dlls/server_ios_arm64.dylib" ] || { echo "Missing iOS server module"; exit 7; }
 mkdir -p "$APP/bo2ioscs/cl_dlls" "$APP/bo2ioscs/dlls"
 cp "$ENGINE_BUILD/GameLibs/cl_dlls/client_ios_arm64.dylib" "$APP/bo2ioscs/cl_dlls/"
-cp "$ENGINE_BUILD/GameLibs/dlls/server_ios_arm64.dylib" "$APP/bo2ioscs/dlls/"
+cp "$ENGINE_BUILD/GameLibs/dlls/server_ios_arm64.dylib" "$APP/bo2ioscs/dlls/hl_ios_arm64.dylib"
 
 # Host_InitCommon does not merely require a file named gfx.wad: it checks for
 # the virtual resource gfx/conchars. Generate a project-owned WAD3 containing
@@ -205,7 +205,7 @@ if [ "$MODE" = "device" ]; then
   grep -qx 'Payload/BO2IOSCS.app/bo2ioscs/bo2ioscs_runtime.cfg' "$OUT/IPA_CONTENTS.txt"
   grep -qx 'Payload/BO2IOSCS.app/SDL2.framework/SDL2' "$OUT/IPA_CONTENTS.txt"
   grep -qx 'Payload/BO2IOSCS.app/bo2ioscs/cl_dlls/client_ios_arm64.dylib' "$OUT/IPA_CONTENTS.txt"
-  grep -qx 'Payload/BO2IOSCS.app/bo2ioscs/dlls/server_ios_arm64.dylib' "$OUT/IPA_CONTENTS.txt"
+  grep -qx 'Payload/BO2IOSCS.app/bo2ioscs/dlls/hl_ios_arm64.dylib' "$OUT/IPA_CONTENTS.txt"
 
   cat > "$OUT/XASH_RUNTIME_REPORT.md" <<REPORT
 # Xash runtime package
