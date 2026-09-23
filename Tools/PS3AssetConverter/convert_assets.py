@@ -15,8 +15,19 @@ TEXTURE_LAYOUTS = {"linear", "ps3_tiled", "ps3_swizzled", "unknown"}
 HASH_RE = re.compile(r"^0x[0-9A-Fa-f]{8}$")
 READABLE_IMPORT_EXTENSIONS = {".wav", ".ogg", ".png", ".dds", ".tga", ".jpg", ".jpeg", ".obj", ".json", ".cfg", ".txt", ".gsc"}
 
+def read_prefix(path: Path, size: int) -> bytes:
+    with path.open("rb") as fp:
+        return fp.read(size)
+
+def sha256_file(path: Path) -> str:
+    h = hashlib.sha256()
+    with path.open("rb") as fp:
+        for block in iter(lambda: fp.read(1024 * 1024), b""):
+            h.update(block)
+    return h.hexdigest()
+
 def detect(path: Path):
-    head = path.read_bytes()[:16]
+    head = read_prefix(path, 16)
     for sig, result in SIGNATURES.items():
         if head.startswith(sig): return result
     ext = path.suffix.lower()
@@ -30,7 +41,7 @@ def detect(path: Path):
     return "unknown", "unknown"
 
 def endian_probe(path: Path):
-    data = path.read_bytes()[:4]
+    data = read_prefix(path, 4)
     if len(data) < 4: return None
     return {"u32_be": struct.unpack(">I", data)[0], "u32_le": struct.unpack("<I", data)[0]}
 
@@ -64,7 +75,7 @@ def scan(source: Path, output: Path):
                    "detected_format": fmt, "probable_asset_class": cls, "compression": "unknown",
                    "endianness": endian_probe(p), "conversion_status": "discovered" if fmt != "unknown" else "unsupported",
                    "converter_used": None, "generated_output_path": None,
-                   "sha256_prefix": hashlib.sha256(p.read_bytes()).hexdigest()[:16],
+                   "sha256_prefix": sha256_file(p)[:16],
                    "warnings": [] if fmt != "unknown" else ["Unknown format preserved for diagnostics"], "errors": []}
             if fmt == "bo2_ipak":
                 try:
@@ -146,7 +157,7 @@ def import_readable_assets(source: Path, output: Path):
             "detected_format": fmt,
             "asset_class": cls,
             "size": p.stat().st_size,
-            "sha256": hashlib.sha256(p.read_bytes()).hexdigest(),
+            "sha256": sha256_file(p),
             "status": "imported_readable_asset"
         })
     manifest = {
