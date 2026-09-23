@@ -93,8 +93,13 @@ if grep -q 'BO2IOSCS_GAMEDATA_CONFIG_LOADED' "$LOGDIR/xash.log" "$LOGDIR/xash-li
   GAMEDATA_CONFIG_MARKER=1
 fi
 
+FATAL_MARKER=0
+if grep -Eiq 'Host_ErrorInit|can.t initialize cl_dlls|Library not loaded|dyld.*missing|fatal error' "$LOGDIR/xash.log" "$LOGDIR/xash-live.log" 2>/dev/null; then
+  FATAL_MARKER=1
+fi
+
 STATUS=FAIL
-if [ "$AUTOTEST_MARKER" -eq 1 ] && [ "$ENGINE_MARKER" -eq 1 ] && [ "$RUNTIME_METADATA_MARKER" -eq 1 ]; then
+if [ "$AUTOTEST_MARKER" -eq 1 ] && [ "$ENGINE_MARKER" -eq 1 ] && [ "$RUNTIME_METADATA_MARKER" -eq 1 ] && [ "$FATAL_MARKER" -eq 0 ]; then
   STATUS=PASS
 fi
 
@@ -108,6 +113,7 @@ cat > "$REPORT" <<EOF
 - engine/filesystem marker: $ENGINE_MARKER
 - runtime metadata execution marker: $RUNTIME_METADATA_MARKER
 - secondary GameData runtime-config marker: $GAMEDATA_CONFIG_MARKER (informational only)
+- fatal runtime marker: $FATAL_MARKER (must be 0)
 - screenshot: $LOGDIR/xash-simulator.png
 - logs: $LOGDIR/xash.log
 - packaged readable asset manifest: present
