@@ -20,6 +20,8 @@ fail() {
 [ -f "$APP/SDL2.framework/SDL2" ] || fail "SDL2.framework missing"
 [ -f "$APP/bo2ioscs/gameinfo.txt" ] || fail "gameinfo missing"
 [ -f "$APP/bo2ioscs/gfx.wad" ] || fail "standalone gfx.wad missing"
+[ -s "$APP/bo2ioscs/delta.lst" ] || fail "delta.lst missing or empty"
+grep -q '^clientdata_t none' "$APP/bo2ioscs/delta.lst" || fail "delta.lst clientdata definition missing"
 python3 - "$APP/bo2ioscs/gfx.wad" <<'PY' || fail "standalone gfx.wad is invalid"
 import struct, sys
 from pathlib import Path
