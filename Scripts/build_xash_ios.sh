@@ -6,8 +6,10 @@ ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 CACHE_ROOT="${XASH_BUILD_ROOT:-$ROOT/Build/OpenSourceEngine}"
 XASH_SHA="4857b389e6ba32ddaa68582aedcbc950c138f46a"
 SDL2_SHA="b90ac95029d801c5abc59472ba8e2200dff31e1e"
+HLSDK_SHA="fe0248bb6de2e61bbb4ece0221e90dc6c4c9dc7b"
 XASH="$CACHE_ROOT/xash3d-fwgs"
 SDL="$CACHE_ROOT/SDL2"
+HLSDK="$CACHE_ROOT/hlsdk-portable"
 
 mkdir -p "$CACHE_ROOT"
 
@@ -53,7 +55,9 @@ build_sdl_framework() {
 
 clone_pinned https://github.com/libsdl-org/SDL.git "$SDL" "$SDL2_SHA"
 clone_pinned https://github.com/FWGS/xash3d-fwgs.git "$XASH" "$XASH_SHA"
+clone_pinned https://github.com/FWGS/hlsdk-portable.git "$HLSDK" "$HLSDK_SHA"
 git -C "$XASH" submodule update --init --recursive --depth=1
+git -C "$HLSDK" submodule update --init --recursive --depth=1
 
 # iOS starts Xash in its writable Documents directory. Our standalone game data
 # is bundled read-only inside the .app, so make the engine mount that bundle as
@@ -106,6 +110,37 @@ if needle not in text:
 path.write_text(text.replace(needle, replacement, 1))
 PY
 
+build_hlsdk() {
+  local sdk="$1"
+  local platform="$2"
+  local out="$3"
+  local gamelibs="$4"
+  rm -rf "$out" "$gamelibs"
+  mkdir -p "$out" "$gamelibs/cl_dlls" "$gamelibs/dlls"
+
+  cmake -S "$HLSDK" -B "$out" -G Ninja \
+    -DCMAKE_SYSTEM_NAME=iOS \
+    -DCMAKE_OSX_SYSROOT="$sdk" \
+    -DCMAKE_OSX_ARCHITECTURES=arm64 \
+    -DCMAKE_OSX_DEPLOYMENT_TARGET=17.0 \
+    -DCMAKE_BUILD_TYPE=Release \
+    -D64BIT=ON \
+    -DGOLDSOURCE_SUPPORT=OFF \
+    -DBUILD_CLIENT=ON \
+    -DBUILD_SERVER=ON
+  cmake --build "$out" --parallel 2
+
+  local client server
+  client="$(find "$out" -type f -name 'client_ios_arm64.dylib' -print -quit)"
+  server="$(find "$out" -type f -name 'server_ios_arm64.dylib' -print -quit)"
+  [ -n "$client" ] || { echo "HLSDK iOS client library was not produced"; find "$out" -name '*.dylib' -print; exit 6; }
+  [ -n "$server" ] || { echo "HLSDK iOS server library was not produced"; find "$out" -name '*.dylib' -print; exit 7; }
+  cp "$client" "$gamelibs/cl_dlls/client_ios_arm64.dylib"
+  cp "$server" "$gamelibs/dlls/server_ios_arm64.dylib"
+  file "$gamelibs/cl_dlls/client_ios_arm64.dylib"
+  file "$gamelibs/dlls/server_ios_arm64.dylib"
+}
+
 case "$MODE" in
   simulator)
     SDL_FRAMEWORK="$(build_sdl_framework iphonesimulator 'generic/platform=iOS Simulator' "$CACHE_ROOT/sdl-simulator-framework")"
@@ -123,6 +158,7 @@ case "$MODE" in
     mkdir -p "$ROOT/Build/XashSimulator"
     cp -R build/* "$ROOT/Build/XashSimulator/"
     cp -R "$SDL_FRAMEWORK" "$ROOT/Build/XashSimulator/"
+    build_hlsdk iphonesimulator simulator "$CACHE_ROOT/hlsdk-simulator" "$ROOT/Build/XashSimulator/GameLibs"
     ;;
 
   device)
@@ -141,6 +177,7 @@ case "$MODE" in
     mkdir -p "$ROOT/Build/XashDevice"
     cp -R build/* "$ROOT/Build/XashDevice/"
     cp -R "$SDL_FRAMEWORK" "$ROOT/Build/XashDevice/"
+    build_hlsdk iphoneos device "$CACHE_ROOT/hlsdk-device" "$ROOT/Build/XashDevice/GameLibs"
     ;;
 
   *)
