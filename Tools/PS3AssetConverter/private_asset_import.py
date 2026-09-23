@@ -36,7 +36,8 @@ def inspect_source(source: Path) -> tuple[list[dict], list[str]]:
     blocked: list[str] = []
     for path in sorted(p for p in source.rglob("*") if p.is_file()):
         rel = path.relative_to(source).as_posix()
-        head = path.read_bytes()[:8]
+        with path.open("rb") as fp:
+            head = fp.read(8)
         encrypted = head == ENCRYPTED_MAGIC
         if encrypted:
             blocked.append(rel)
@@ -59,6 +60,7 @@ def main() -> int:
     ap.add_argument("--extract-ipak", action="store_true", help="Allow existing converter to index/extract readable IPAK data")
     ap.add_argument("--texture-metadata", help="Authoritative texture metadata JSON when generating runtime textures")
     ap.add_argument("--generate-runtime-textures", action="store_true")
+    ap.add_argument("--skip-encrypted-fastfiles", action="store_true", help="Record and exclude authenticated/encrypted fastfiles instead of aborting readable-asset conversion")
     args = ap.parse_args()
 
     root = Path(__file__).resolve().parents[2]
@@ -71,7 +73,7 @@ def main() -> int:
         print("warning: private source is inside the repository; ensure it remains ignored and uncommitted", file=sys.stderr)
 
     records, blocked = inspect_source(source)
-    if blocked:
+    if blocked and not args.skip_encrypted_fastfiles:
         print("Refusing encrypted/authenticated BO2 fastfiles:", file=sys.stderr)
         for rel in blocked:
             print(f"  - {rel}", file=sys.stderr)
@@ -87,7 +89,8 @@ def main() -> int:
         "source_root_recorded": source.name,
         "source_file_count": len(records),
         "files": records,
-        "contains_encrypted_fastfiles": False,
+        "contains_encrypted_fastfiles": bool(blocked),
+        "encrypted_fastfiles_excluded": len(blocked),
         "source_files_committed": False,
     }
     (output / "PRIVATE_IMPORT_MANIFEST.json").write_text(json.dumps(manifest, indent=2) + "\n")
