@@ -17,7 +17,7 @@ if (-not (Get-Command ffmpeg -ErrorAction SilentlyContinue)) { throw "ffmpeg is 
 if ($Clean -and (Test-Path $Output)) { Remove-Item -Recurse -Force $Output; New-Item -ItemType Directory -Force -Path $Output | Out-Null }
 try {
   Save-State "private-import" "running"
-  & python "$Root\Tools\PS3AssetConverter\private_asset_import.py" --source $Source --output $Output --extract-ipak
+  & python "$Root\Tools\PS3AssetConverter\private_asset_import.py" --source $Source --output $Output --extract-ipak --skip-encrypted-fastfiles
   if ($LASTEXITCODE -ne 0) { throw "private asset import failed ($LASTEXITCODE)" }
   Save-State "media-convert" "running"
   & python "$Root\Tools\PS3AssetConverter\media_convert.py" --source $Source --output $Output
