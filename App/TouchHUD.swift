@@ -6,7 +6,7 @@ final class TouchHUD: UIView {
     var onLook: ((CGVector) -> Void)?
 
     private let stick = UIView()
-    private let labels = ["FIRE", "RELOAD", "JUMP", "CROUCH", "USE", "SWAP", "SCORE", "MOD"]
+    private let labels = ["FIRE", "ADS", "RELOAD", "JUMP", "CROUCH", "USE", "SWAP", "MOD"]
     private var moveTouch: UITouch?
     private var lookTouch: UITouch?
     private var moveOrigin = CGPoint.zero
@@ -23,7 +23,9 @@ final class TouchHUD: UIView {
             let b = UIButton(type: .system)
             b.setTitle(title, for: .normal)
             b.titleLabel?.font = .systemFont(ofSize: 11, weight: .bold)
-            b.backgroundColor = UIColor.black.withAlphaComponent(0.35)
+            b.backgroundColor = UIColor.black.withAlphaComponent(0.28)
+            b.layer.borderWidth = 1
+            b.layer.borderColor = UIColor.white.withAlphaComponent(0.25).cgColor
             b.layer.cornerRadius = 22
             b.tag = 100 + i
             b.addTarget(self, action: #selector(buttonPressed(_:)), for: .touchUpInside)
