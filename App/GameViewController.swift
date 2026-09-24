@@ -21,6 +21,10 @@ final class GameViewController: UIViewController, SCNSceneRendererDelegate {
     private var loadedReadableAssetCount = 0
     private var loadedMap: RuntimeMapDefinition?
     private let playerTeam: Team = .attack
+    private var modMenu: UIView?
+    private var modGodMode = false
+    private var modFastMove = false
+    private var modNoclip = false
 
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -140,6 +144,7 @@ final class GameViewController: UIViewController, SCNSceneRendererDelegate {
             switch action {
             case "FIRE": self.firePlayerWeapon()
             case "RELOAD": _ = self.weaponState?.beginReload()
+            case "MOD": self.toggleModMenu()
             case "USE":
                 guard let camera = self.playerCamera else { break }
                 let p = camera.presentation.worldPosition
@@ -152,6 +157,43 @@ final class GameViewController: UIViewController, SCNSceneRendererDelegate {
             }
         }
         view.addSubview(hud)
+    }
+
+    private func toggleModMenu() {
+        if let menu = modMenu { menu.removeFromSuperview(); modMenu = nil; return }
+        let panel = UIStackView()
+        panel.axis = .vertical
+        panel.spacing = 6
+        panel.backgroundColor = UIColor.black.withAlphaComponent(0.82)
+        panel.layer.cornerRadius = 10
+        panel.frame = CGRect(x: 24, y: 60, width: 220, height: 230)
+        let title = UILabel()
+        title.text = "BO2 iOS MOD MENU"
+        title.textColor = .white
+        title.textAlignment = .center
+        title.font = .boldSystemFont(ofSize: 15)
+        panel.addArrangedSubview(title)
+        for (tag, name) in ["GOD MODE", "FAST MOVE", "NOCLIP", "REFILL AMMO"].enumerated() {
+            let b = UIButton(type: .system)
+            b.setTitle(name, for: .normal)
+            b.tag = 500 + tag
+            b.addTarget(self, action: #selector(modAction(_:)), for: .touchUpInside)
+            panel.addArrangedSubview(b)
+        }
+        view.addSubview(panel)
+        modMenu = panel
+        RuntimeLog.stage("MOD_MENU_OPEN")
+    }
+
+    @objc private func modAction(_ sender: UIButton) {
+        switch sender.tag {
+        case 500: modGodMode.toggle()
+        case 501: modFastMove.toggle()
+        case 502: modNoclip.toggle()
+        case 503: weaponState?.refillAmmo()
+        default: break
+        }
+        RuntimeLog.stage("MOD_ACTION_\(sender.tag)")
     }
 
     private func firePlayerWeapon() {
@@ -185,7 +227,7 @@ final class GameViewController: UIViewController, SCNSceneRendererDelegate {
     private func updatePlayer(dt: TimeInterval) {
         guard let camera = playerCamera else { return }
         camera.eulerAngles = SCNVector3(pitch, yaw, 0)
-        let speed = Float(5.0 * dt)
+        let speed = Float((modFastMove ? 10.0 : 5.0) * dt)
         let forwardX = -sinf(yaw)
         let forwardZ = -cosf(yaw)
         let rightX = cosf(yaw)
@@ -195,8 +237,10 @@ final class GameViewController: UIViewController, SCNSceneRendererDelegate {
         var p = camera.position
         p.x += (rightX * strafe + forwardX * forward) * speed
         p.z += (rightZ * strafe + forwardZ * forward) * speed
-        p.x = max(-15.5, min(15.5, p.x))
-        p.z = max(-10.5, min(10.5, p.z))
+        if !modNoclip {
+            p.x = max(-15.5, min(15.5, p.x))
+            p.z = max(-10.5, min(10.5, p.z))
+        }
         camera.position = p
     }
 
