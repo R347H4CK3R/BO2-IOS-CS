@@ -39,6 +39,13 @@ final class PlayerWeaponState {
         return true
     }
 
+    func refillAmmo() {
+        magazine = definition.magazineCapacity
+        reserve = definition.reserveAmmo
+        isReloading = false
+        reloadRemaining = 0
+    }
+
     func tick(dt: TimeInterval) {
         guard isReloading else { return }
         reloadRemaining = max(0, reloadRemaining - dt)
