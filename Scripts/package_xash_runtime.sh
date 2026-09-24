@@ -147,7 +147,22 @@ PY
 mkdir -p "$APP/bo2ioscs/GameData"
 cp -R "$ROOT/GameData/." "$APP/bo2ioscs/GameData/"
 if [ -d "$ROOT/GeneratedGameData" ]; then
-  cp -R "$ROOT/GeneratedGameData/." "$APP/bo2ioscs/GameData/"
+  python3 - "$ROOT/GeneratedGameData" "$APP/bo2ioscs/GameData" <<'PY'
+import shutil, sys
+from pathlib import Path
+src, dst = map(Path, sys.argv[1:])
+campaign = ("afghanistan","angola","blackout","haiti","karma","la_1","la_2","monsoon","nicaragua","pakistan","panama","yemen")
+copied = excluded = 0
+for p in src.rglob("*"):
+    if not p.is_file(): continue
+    rel = p.relative_to(src)
+    if any(x in rel.name.lower() for x in campaign):
+        excluded += 1; continue
+    out = dst / rel
+    out.parent.mkdir(parents=True, exist_ok=True)
+    shutil.copy2(p, out); copied += 1
+print(f"BO2IOSCS_PACKAGE_FILTER copied={copied} excluded_campaign={excluded}")
+PY
 fi
 
 # Compile normalized project metadata into a tiny Xash config that is executed
