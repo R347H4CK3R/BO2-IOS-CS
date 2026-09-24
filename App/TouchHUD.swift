@@ -6,7 +6,7 @@ final class TouchHUD: UIView {
     var onLook: ((CGVector) -> Void)?
 
     private let stick = UIView()
-    private let labels = ["FIRE", "RELOAD", "JUMP", "CROUCH", "USE", "SWAP", "SCORE", "PAUSE"]
+    private let labels = ["FIRE", "RELOAD", "JUMP", "CROUCH", "USE", "SWAP", "SCORE", "MOD"]
     private var moveTouch: UITouch?
     private var lookTouch: UITouch?
     private var moveOrigin = CGPoint.zero
