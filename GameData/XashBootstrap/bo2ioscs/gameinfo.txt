@@ -2,8 +2,8 @@
 title "BO2 iOS CS"
 gamedir bo2ioscs
 basedir bo2ioscs
-type "Development"
-gamemode singleplayer_only
+type "Multiplayer"
+gamemode multiplayer_only
 version 0.1
 startmap bootstrap
 trainmap bootstrap
