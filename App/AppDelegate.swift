@@ -8,7 +8,7 @@ final class AppDelegate: UIResponder, UIApplicationDelegate {
                      didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
         RuntimeLog.stage("APP_START")
         let window = UIWindow(frame: UIScreen.main.bounds)
-        window.rootViewController = GameViewController()
+        window.rootViewController = BO2MenuViewController()
         window.makeKeyAndVisible()
         self.window = window
         return true
