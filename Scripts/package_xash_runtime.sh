@@ -42,11 +42,11 @@ mkdir -p "$APP/bo2ioscs/resource"
 cat > "$APP/bo2ioscs/resource/GameMenu.res" <<'MENU'
 "GameMenu"
 {
-  "1" { "label" "New Game" "command" "OpenNewGameDialog" }
-  "2" { "label" "Multiplayer" "command" "OpenServerBrowser" }
-  "3" { "label" "Options" "command" "OpenOptionsDialog" }
-  "4" { "label" "Console" "command" "engine toggleconsole" }
-  "5" { "label" "Quit" "command" "Quit" }
+  "1" { "label" "START MATCH" "command" "engine map bootstrap" }
+  "2" { "label" "MULTIPLAYER" "command" "OpenServerBrowser" }
+  "3" { "label" "OPTIONS" "command" "OpenOptionsDialog" }
+  "4" { "label" "CONSOLE" "command" "engine toggleconsole" }
+  "5" { "label" "QUIT" "command" "Quit" }
 }
 MENU
 cat > "$APP/bo2ioscs/resource/bo2ioscs_english.txt" <<'LANG'
@@ -56,10 +56,11 @@ cat > "$APP/bo2ioscs/resource/bo2ioscs_english.txt" <<'LANG'
   "Tokens"
   {
     "GameUI_Console" "Console"
-    "GameUI_NewGame" "New Game"
+    "GameUI_NewGame" "Start Match"
     "GameUI_Options" "Options"
-    "GameUI_LoadGame" "Load Game"
+    "GameUI_LoadGame" ""
     "GameUI_Multiplayer" "Multiplayer"
+    "GameUI_Previews" ""
     "GameUI_GameMenu_Quit" "Quit"
     "GameUI_QuitConfirmationText" "Quit BO2 iOS CS?"
   }
