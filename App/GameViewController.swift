@@ -1,7 +1,16 @@
 import UIKit
 import SceneKit
+import GameController
 
 final class GameViewController: UIViewController, SCNSceneRendererDelegate {
+    private let launchConfiguration: BO2LaunchConfiguration?
+
+    init(configuration: BO2LaunchConfiguration? = nil) {
+        self.launchConfiguration = configuration
+        super.init(nibName: nil, bundle: nil)
+    }
+
+    required init?(coder: NSCoder) { fatalError("init(coder:) has not been implemented") }
     private let sceneView = SCNView()
     private let scene = SCNScene()
     private var sim = MatchSimulation(botCount: 4)
@@ -37,6 +46,8 @@ final class GameViewController: UIViewController, SCNSceneRendererDelegate {
         RuntimeLog.stage("FILESYSTEM_INIT")
         setupScene()
         setupHUD()
+        setupControllerSupport()
+        if let config = launchConfiguration { RuntimeLog.stage("MATCH_CONFIG_\(config.mode.rawValue.uppercased())_\(config.gameMode.uppercased().replacingOccurrences(of: " ", with: "_"))") }
         if autotest { RuntimeLog.stage("AUTOTEST_BEGIN") }
     }
 
@@ -157,6 +168,34 @@ final class GameViewController: UIViewController, SCNSceneRendererDelegate {
             }
         }
         view.addSubview(hud)
+    }
+
+    private func setupControllerSupport() {
+        func bind(_ controller: GCController) {
+            guard let pad = controller.extendedGamepad else { return }
+            pad.leftThumbstick.valueChangedHandler = { [weak self] _, x, y in
+                self?.moveInput = CGVector(dx: CGFloat(x), dy: CGFloat(y))
+            }
+            pad.rightThumbstick.valueChangedHandler = { [weak self] _, x, y in
+                guard let self else { return }
+                self.yaw -= x * 0.045
+                self.pitch = max(-1.2, min(1.2, self.pitch + y * 0.035))
+            }
+            pad.rightTrigger.pressedChangedHandler = { [weak self] _, _, pressed in
+                if pressed { DispatchQueue.main.async { self?.firePlayerWeapon() } }
+            }
+            pad.buttonX.pressedChangedHandler = { [weak self] _, _, pressed in
+                if pressed { _ = self?.weaponState?.beginReload() }
+            }
+            pad.buttonMenu.pressedChangedHandler = { [weak self] _, _, pressed in
+                if pressed { DispatchQueue.main.async { self?.dismiss(animated: false) } }
+            }
+        }
+        GCController.controllers().forEach(bind)
+        NotificationCenter.default.addObserver(forName: .GCControllerDidConnect, object: nil, queue: .main) { note in
+            if let controller = note.object as? GCController { bind(controller) }
+        }
+        RuntimeLog.stage("CONTROLLER_INPUT_READY")
     }
 
     private func toggleModMenu() {
