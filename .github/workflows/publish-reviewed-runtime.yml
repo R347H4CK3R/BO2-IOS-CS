@@ -1,0 +1,89 @@
+name: Publish reviewed Xash runtime
+on:
+  workflow_dispatch:
+  push:
+    branches: [release/publish-xash-0.1-build3]
+    paths: ['.github/workflows/publish-reviewed-runtime.yml']
+permissions:
+  contents: write
+  actions: read
+concurrency:
+  group: publish-reviewed-xash-runtime
+  cancel-in-progress: false
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: R347H4CK3R/BO2-IOS-CS
+      TAG: runtime-0.1-build3
+      SOURCE_SHA: 19b855bd032587eed6f2f972b1019997a8c72b89
+      IPA_SHA: 73df157af5fded447d1542bf2f7a8de3f8270ec80e9c71599ffde3f80bb9c6d2
+    steps:
+      - name: Require exact successful build jobs and corrected startup verification
+        run: |
+          gh api "repos/$GH_REPO/actions/runs/42521767991" > run.json
+          gh api "repos/$GH_REPO/actions/runs/42521767991/jobs?per_page=100" > jobs.json
+          gh api "repos/$GH_REPO/actions/runs/42523257291" > verification.json
+          python3 - <<'PY'
+          import json,os
+          r=json.load(open('run.json'))
+          assert r['head_sha']==os.environ['SOURCE_SHA']
+          required={'source-validation','converter-unit-tests','open-source-engine-device-build','open-source-engine-simulator-build','device-build','simulator-build','simulator-runtime-test','ipa-packaging-validation'}
+          jobs=json.load(open('jobs.json'))['jobs']
+          for name in required:
+              matches=[j for j in jobs if j['name']==name]
+              assert len(matches)==1 and matches[0]['conclusion']=='success'
+          v=json.load(open('verification.json'))
+          assert v['head_sha']=='205954fc464d6cd94579650043105c0088f231dc' and v['conclusion']=='success'
+          PY
+      - uses: actions/download-artifact@v4
+        with:
+          repository: R347H4CK3R/BO2-IOS-CS
+          run-id: 42521767991
+          artifact-ids: '13633392701'
+          github-token: ${{ github.token }}
+          path: candidate
+      - name: Verify unchanged reviewed IPA
+        run: |
+          python3 - <<'PY'
+          import hashlib,json,os,pathlib,plistlib,zipfile
+          files=list(pathlib.Path('candidate').rglob('*.ipa'));assert len(files)==1
+          p=files[0];assert p.stat().st_size==5570497
+          assert hashlib.sha256(p.read_bytes()).hexdigest()==os.environ['IPA_SHA']
+          with zipfile.ZipFile(p) as z:
+            i=plistlib.loads(z.read('Payload/BO2IOSCS.app/Info.plist'))
+            assert (i['CFBundleIdentifier'],str(i['CFBundleShortVersionString']),str(i['CFBundleVersion']))==('com.r347h4ck3r.bo2ioscs.xash','0.1','3')
+          p.rename('BO2IOSCS-Xash-integrated.ipa')
+          sources=list(pathlib.Path('candidate').rglob('BO2IOSCS-Xash-source.zip'));assert len(sources)==1
+          src=sources[0];assert src.stat().st_size==96351192
+          assert hashlib.sha256(src.read_bytes()).hexdigest()=='d976a87e9c3e54dff86a7e8048ce08badfbb6d6f43ad88cd7f44ec9c262beb0b'
+          src.rename('BO2IOSCS-Xash-source.zip')
+          pathlib.Path('SHA256SUMS').write_text(os.environ['IPA_SHA']+'  BO2IOSCS-Xash-integrated.ipa\n'+'d976a87e9c3e54dff86a7e8048ce08badfbb6d6f43ad88cd7f44ec9c262beb0b  BO2IOSCS-Xash-source.zip\n')
+          PY
+      - name: Publish exact prototype without replacing existing release
+        run: |
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            echo 'Release already exists; refusing to overwrite it.'
+            exit 1
+          fi
+          cat > release-notes.md <<'NOTES'
+          BO2 iOS CS experimental Xash runtime 0.1 (3), iOS 17 or later. This is a native startup/runtime research build using safe normalized fixtures, not full converted BO2 gameplay or a complete commercial-game port. Physical-device gameplay and SideStore installation have not been tested.
+
+          The exact unsigned IPA comes from verified source commit 19b855bd032587eed6f2f972b1019997a8c72b89 and build https://github.com/R347H4CK3R/BO2-IOS-CS/actions/runs/42521767991 . Native compilation, unit tests and archive checks passed. The first startup check missed an early log line. After fixing log capture without changing the app or pass criteria, startup/config execution was verified using the exact existing simulator artifact: https://github.com/R347H4CK3R/BO2-IOS-CS/actions/runs/42523257291 . Independent inspection verified the ARM64 device payload, bundle/version, OS requirement and embedded legal notices.
+
+          Required Xash GPL, HLSDK and SDL license texts are included in the app. The accompanying corresponding-source archive contains 9,203 tracked source files, initialized pinned dependencies, applied patches, original notices and build scripts, with a per-file hash manifest. GPL-covered code and upstream notices retain their licenses. The HLSDK components are distributed free of charge. No proprietary PS3 source dumps or retail game files are included.
+
+          Sign the unsigned IPA using a compatible sideloading tool. Preserve existing saves/data. Read the source README and build scripts for the project's current limitations; this release does not prove complete game conversion, campaign or multiplayer support.
+          NOTES
+          gh release create "$TAG" --target "$SOURCE_SHA" --title 'BO2 iOS CS 0.1 (3) - experimental runtime' --notes-file release-notes.md --draft BO2IOSCS-Xash-integrated.ipa BO2IOSCS-Xash-source.zip SHA256SUMS
+          gh release view "$TAG" --json assets > release.json
+          python3 - <<'PY'
+          import json
+          a=[x for x in json.load(open('release.json'))['assets'] if x['name']=='BO2IOSCS-Xash-integrated.ipa']
+          assert len(a)==1 and a[0]['size']==5570497
+          sources=[x for x in json.load(open('release.json'))['assets'] if x['name']=='BO2IOSCS-Xash-source.zip']
+          assert len(sources)==1 and sources[0]['size']==96351192
+          PY
+          gh release edit "$TAG" --draft=false --latest=false
