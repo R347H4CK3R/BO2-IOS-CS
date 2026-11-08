@@ -36,6 +36,16 @@ mkdir -p "$APP"
 )
 
 cp -R "$SDL_FRAMEWORK" "$APP/SDL2.framework"
+# Keep the exact upstream legal notices with the libraries being redistributed.
+HLSDK_LICENSE="$ROOT/Build/OpenSourceEngine/hlsdk-portable/LICENSE"
+SDL_LICENSE="$ROOT/Build/OpenSourceEngine/SDL2/LICENSE.txt"
+test -s "$HLSDK_LICENSE"
+test -s "$SDL_LICENSE"
+mkdir -p "$APP/Licenses"
+cp "$HLSDK_LICENSE" "$APP/Licenses/HLSDK.txt"
+cp "$SDL_LICENSE" "$APP/Licenses/SDL2.txt"
+cmp "$HLSDK_LICENSE" "$APP/Licenses/HLSDK.txt"
+cmp "$SDL_LICENSE" "$APP/Licenses/SDL2.txt"
 mkdir -p "$APP/bo2ioscs"
 cp -R "$ROOT/GameData/XashBootstrap/bo2ioscs/." "$APP/bo2ioscs/"
 mkdir -p "$APP/bo2ioscs/resource"
@@ -229,7 +239,7 @@ cat > "$APP/Info.plist" <<'PLIST'
   <key>CFBundleName</key><string>BO2IOSCSXash</string>
   <key>CFBundlePackageType</key><string>APPL</string>
   <key>CFBundleShortVersionString</key><string>0.1</string>
-  <key>CFBundleVersion</key><string>1</string>
+  <key>CFBundleVersion</key><string>2</string>
   <key>LSRequiresIPhoneOS</key><true/>
   <key>MinimumOSVersion</key><string>17.0</string>
   <key>NSMicrophoneUsageDescription</key><string>Voice input may be used by the game runtime.</string>
