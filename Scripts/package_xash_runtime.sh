@@ -46,6 +46,9 @@ cp "$HLSDK_LICENSE" "$APP/Licenses/HLSDK.txt"
 cp "$SDL_LICENSE" "$APP/Licenses/SDL2.txt"
 cmp "$HLSDK_LICENSE" "$APP/Licenses/HLSDK.txt"
 cmp "$SDL_LICENSE" "$APP/Licenses/SDL2.txt"
+test -s "$ROOT/Legal/Xash3D-GPL-3.0.txt"
+cp "$ROOT/Legal/Xash3D-GPL-3.0.txt" "$APP/Licenses/Xash3D-GPL-3.0.txt"
+cmp "$ROOT/Legal/Xash3D-GPL-3.0.txt" "$APP/Licenses/Xash3D-GPL-3.0.txt"
 mkdir -p "$APP/bo2ioscs"
 cp -R "$ROOT/GameData/XashBootstrap/bo2ioscs/." "$APP/bo2ioscs/"
 mkdir -p "$APP/bo2ioscs/resource"
@@ -239,7 +242,7 @@ cat > "$APP/Info.plist" <<'PLIST'
   <key>CFBundleName</key><string>BO2IOSCSXash</string>
   <key>CFBundlePackageType</key><string>APPL</string>
   <key>CFBundleShortVersionString</key><string>0.1</string>
-  <key>CFBundleVersion</key><string>2</string>
+  <key>CFBundleVersion</key><string>3</string>
   <key>LSRequiresIPhoneOS</key><true/>
   <key>MinimumOSVersion</key><string>17.0</string>
   <key>NSMicrophoneUsageDescription</key><string>Voice input may be used by the game runtime.</string>

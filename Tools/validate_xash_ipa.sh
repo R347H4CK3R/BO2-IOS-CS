@@ -19,6 +19,7 @@ fail() {
 [ -f "$APP/Info.plist" ] || fail "Info.plist missing"
 [ -s "$APP/Licenses/HLSDK.txt" ] || fail "required HLSDK license missing"
 [ -s "$APP/Licenses/SDL2.txt" ] || fail "required SDL2 license missing"
+[ -s "$APP/Licenses/Xash3D-GPL-3.0.txt" ] || fail "required Xash3D GPL license missing"
 [ -f "$APP/SDL2.framework/SDL2" ] || fail "SDL2.framework missing"
 [ -f "$APP/bo2ioscs/gameinfo.txt" ] || fail "gameinfo missing"
 [ -f "$APP/bo2ioscs/gfx.wad" ] || fail "standalone gfx.wad missing"
@@ -71,7 +72,7 @@ cat > "$REPORT" <<EOF
 - architecture slices: $ARCHS
 - bundled dylibs: $DYLIB_COUNT
 - SDL2 framework: present
-- HLSDK and SDL2 legal notices: present
+- HLSDK, SDL2 and Xash3D GPL legal notices: present
 - gameinfo: present
 - generated GameData runtime config: present
 - normalized GameData map: present
