@@ -29,3 +29,13 @@ class SourceArchiveTests(unittest.TestCase):
             (root/'link').symlink_to('/etc/passwd')
             subprocess.run(['git','-C',str(root),'add','link'],check=True)
             with self.assertRaises(ValueError):list(module.tracked_files(root))
+
+    def test_preserves_relative_source_symlink(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root=Path(temp)/'repo';root.mkdir();self.repo(root)
+            (root/'link').symlink_to('source.c')
+            subprocess.run(['git','-C',str(root),'add','link'],check=True)
+            output=Path(temp)/'source.zip';module.archive_sources({'component':root},output)
+            with zipfile.ZipFile(output) as z:
+                self.assertEqual(z.read('component/link'),b'source.c')
+                self.assertEqual((z.getinfo('component/link').external_attr>>16)&0o170000,0o120000)
