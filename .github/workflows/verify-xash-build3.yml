@@ -1,0 +1,46 @@
+name: Verify exact build3 startup capture
+on:
+  push:
+    branches: [verification/xash-build3-capture]
+    paths: ['.github/workflows/verify-xash-build3.yml','Scripts/run_xash_simulator_test.sh','Tools/PS3AssetConverter/test_xash_capture.py']
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: read
+jobs:
+  verify:
+    runs-on: macos-15
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify unchanged pass/fail criteria with tests
+        run: python3 -m unittest discover -s Tools/PS3AssetConverter -p 'test_*.py'
+      - uses: actions/download-artifact@v4
+        with:
+          repository: R347H4CK3R/BO2-IOS-CS
+          run-id: 42521767991
+          artifact-ids: '13633094244'
+          github-token: ${{ github.token }}
+          path: candidate
+      - name: Verify actual startup markers from exact existing app
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import subprocess
+          apps=list(Path('candidate').rglob('BO2IOSCS.app'));assert len(apps)==1
+          subprocess.run(['bash','Scripts/run_xash_simulator_test.sh',str(apps[0])],check=True,timeout=1000)
+          report=Path('XASH_SIMULATOR_TEST_REPORT.md').read_text()
+          assert '- status: PASS' in report
+          for line in report.splitlines():
+              if line.startswith(('- status:','- noninteractive','- engine/filesystem','- runtime metadata','- fatal')):
+                  print(line)
+          PY
+      - name: Preserve exact candidate runtime evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: verified-build3-runtime
+          path: |
+            XASH_SIMULATOR_TEST_REPORT.md
+            Build/XashRuntimeLogs/
+          if-no-files-found: warn

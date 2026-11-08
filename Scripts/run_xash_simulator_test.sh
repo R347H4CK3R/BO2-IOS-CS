@@ -66,13 +66,14 @@ cleanup() {
 }
 trap cleanup EXIT
 
+touch "$LOGDIR/app-stdout.log" "$LOGDIR/app-stderr.log"
 SIMCTL_CHILD_BO2IOSCS_AUTOTEST=1 \
-xcrun simctl launch --terminate-running-process "$UDID" "$BUNDLE" \
+xcrun simctl launch --terminate-running-process --stdout="$ROOT/$LOGDIR/app-stdout.log" --stderr="$ROOT/$LOGDIR/app-stderr.log" "$UDID" "$BUNDLE" \
   > "$LOGDIR/launch.log" 2>&1
 
 sleep 8
 xcrun simctl io "$UDID" screenshot "$LOGDIR/xash-simulator.png" >/dev/null 2>&1 || true
-xcrun simctl spawn "$UDID" log show --last 3m --style compact \
+xcrun simctl spawn "$UDID" log show --last 15m --style compact \
   --predicate 'process == "xash" OR eventMessage CONTAINS "BO2IOSCS_AUTOTEST" OR eventMessage CONTAINS "Xash"' \
   > "$LOGDIR/xash.log" 2>&1 || true
 
@@ -80,21 +81,21 @@ AUTOTEST_MARKER=0
 ENGINE_MARKER=0
 RUNTIME_METADATA_MARKER=0
 GAMEDATA_CONFIG_MARKER=0
-if grep -q 'BO2IOSCS_AUTOTEST launch path enabled' "$LOGDIR/xash.log" "$LOGDIR/xash-live.log" 2>/dev/null; then
+if grep -q 'BO2IOSCS_AUTOTEST launch path enabled' "$LOGDIR/xash.log" "$LOGDIR/xash-live.log" "$LOGDIR/app-stdout.log" "$LOGDIR/app-stderr.log" 2>/dev/null; then
   AUTOTEST_MARKER=1
 fi
-if grep -Eiq 'Xash3D|Xash:|Host_Init|filesystem|gameinfo|bo2ioscs' "$LOGDIR/xash.log" "$LOGDIR/xash-live.log" 2>/dev/null; then
+if grep -Eiq 'Xash3D|Xash:|Host_Init|filesystem|gameinfo|bo2ioscs' "$LOGDIR/xash.log" "$LOGDIR/xash-live.log" "$LOGDIR/app-stdout.log" "$LOGDIR/app-stderr.log" 2>/dev/null; then
   ENGINE_MARKER=1
 fi
-if grep -q 'BO2IOSCS_RUNTIME_METADATA_LOADED' "$LOGDIR/xash.log" "$LOGDIR/xash-live.log" 2>/dev/null; then
+if grep -q 'BO2IOSCS_RUNTIME_METADATA_LOADED' "$LOGDIR/xash.log" "$LOGDIR/xash-live.log" "$LOGDIR/app-stdout.log" "$LOGDIR/app-stderr.log" 2>/dev/null; then
   RUNTIME_METADATA_MARKER=1
 fi
-if grep -q 'BO2IOSCS_GAMEDATA_CONFIG_LOADED' "$LOGDIR/xash.log" "$LOGDIR/xash-live.log" 2>/dev/null; then
+if grep -q 'BO2IOSCS_GAMEDATA_CONFIG_LOADED' "$LOGDIR/xash.log" "$LOGDIR/xash-live.log" "$LOGDIR/app-stdout.log" "$LOGDIR/app-stderr.log" 2>/dev/null; then
   GAMEDATA_CONFIG_MARKER=1
 fi
 
 FATAL_MARKER=0
-if grep -Eiq 'Host_ErrorInit|can.t initialize cl_dlls|Library not loaded|dyld.*missing|fatal error' "$LOGDIR/xash.log" "$LOGDIR/xash-live.log" 2>/dev/null; then
+if grep -Eiq 'Host_ErrorInit|can.t initialize cl_dlls|Library not loaded|dyld.*missing|fatal error' "$LOGDIR/xash.log" "$LOGDIR/xash-live.log" "$LOGDIR/app-stdout.log" "$LOGDIR/app-stderr.log" 2>/dev/null; then
   FATAL_MARKER=1
 fi
 
