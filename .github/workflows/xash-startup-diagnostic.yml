@@ -1,0 +1,53 @@
+name: Diagnose bounded Xash startup
+on:
+  push:
+    branches: [diagnostics/xash-startup-timeout]
+    paths: ['.github/workflows/xash-startup-diagnostic.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: read
+jobs:
+  diagnose:
+    runs-on: macos-15
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: b2af0a851d64d8505b9ac9075661f793499d7592
+      - uses: actions/download-artifact@v4
+        with:
+          repository: R347H4CK3R/BO2-IOS-CS
+          run-id: 42519149258
+          artifact-ids: '13632742577'
+          github-token: ${{ github.token }}
+          path: Build/XashSimulatorRuntime
+      - name: Trace exact candidate startup with a five-minute bound
+        run: |
+          python3 - <<'PY'
+          import os, pathlib, signal, subprocess, sys
+          apps=list(pathlib.Path('Build/XashSimulatorRuntime').rglob('BO2IOSCS.app'))
+          assert len(apps)==1, 'Expected exact simulator candidate app'
+          command=['bash','-x','Scripts/run_xash_simulator_test.sh',str(apps[0])]
+          process=subprocess.Popen(command,start_new_session=True)
+          try:
+              code=process.wait(timeout=300)
+          except subprocess.TimeoutExpired:
+              print('Diagnostic timed out after 300 seconds; this is NOT a runtime pass.',flush=True)
+              os.killpg(process.pid,signal.SIGTERM)
+              try:process.wait(timeout=5)
+              except subprocess.TimeoutExpired:os.killpg(process.pid,signal.SIGKILL);process.wait()
+              sys.exit(124)
+          if code:sys.exit(code)
+          report=pathlib.Path('XASH_SIMULATOR_TEST_REPORT.md').read_text()
+          assert '- status: PASS' in report, 'Unavailable/incomplete runtime is not a pass'
+          PY
+      - name: Preserve simulator-only diagnostic evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: bounded-xash-startup-evidence
+          path: |
+            XASH_SIMULATOR_TEST_REPORT.md
+            Build/XashRuntimeLogs/
+          if-no-files-found: warn
